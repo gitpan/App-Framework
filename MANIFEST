@@ -1,5 +1,6 @@
-App-Framework-0.01.tar.gz
 Changes
+examples/eg1.pl
+examples/eg2.pl
 inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
@@ -21,8 +22,6 @@ lib/App/Framework/Modules/Filter.pm
 lib/App/Framework/Modules/Script.pm
 Makefile.PL
 MANIFEST			This list of files
-META.yml
-pm_to_blib
 README
 t/00-load.t
 t/pod-coverage.t

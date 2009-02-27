@@ -19,99 +19,7 @@ sub options { ... }
 
 =head1 DESCRIPTION
 
-Base class for applications. Expected to be derived from by an implementable class (like App:Script).
-
-Base provides (and handles) the following options:
-
-	debug			Set the debug level value
-	h|"help"		Show brief help message then exit
-	man				Show full man page then exit
-	pod				Show full man page as pod then exit
-
-Once the object has been created it can then be run by calling the 'go()' method. go() calls in turn:
-
-	* pre_run()		Gets & processes the options, then calls the pre_run_fn if set
-	* run()			Handles any special options (-man etc), then calls the run_fn if set
-	* post_run()	Calls post_run_fn if set
-	* exit()		Called with exit value 0 if execution reaches this far
-
-The pre_run_fn, run_fn, and post_run_fn fields of the object can either be set directly as part of the new() call,
-or the prefered approach is to define pre_run, run, and post_run subroutines in the calling namespace. These subroutines
-are detected by App::Framework::Base and automatically set on the object.
-
-Similarly, the __DATA__ area of the calling namespace if the prefered area to use for object set up of common
-fields (rather than as part of the new() call). Example __DATA__ contents:
-
-	__DATA__
-	
-	[HISTORY]
-	
-	30-May-08	SDP		Re-written to use App::Framework::Script 
-	28-May-08   SDP		New
-	
-	[SUMMARY]
-	
-	List (and repair) any faulty rrd database files
-	
-	[SYNOPSIS]
-	
-	$name [options] <rrd file(s)>
-	
-	[OPTIONS]
-	
-	-d|'dir'=s	temp directory	[default=/tmp]
-	
-	Specify the directory in which to store the xml output files (created by dumping the rrd databases)
-	
-	-repair 	Enable rrd repair
-	
-	When this option is specified, causes the script to repair any faulty rrd files
-	
-	
-	[DESCRIPTION]
-	
-	Scans the specified rrd directory and lists any files which are 'faulty'. 
-	
-	Optionally this script can also repair the fault by setting the value to NaN.
-	
-	An export RRD database in XML file is of the form:
-	
-	  <!-- Round Robin Database Dump --><rrd>	<version> 0003 </version>
-		<step> 300 </step> <!-- Seconds -->
-		<lastupdate> 1211355308 </lastupdate> <!-- 2008-05-21 08:35:08 BST -->
- 
-This example sets the fields: history, summary, synopsis, options, and description. This information is also used to 
-automatically create the application pod, man, and usage pages.
-
-Similarly, the $VERSION variable in the calling namespace is detected and used to set the application version number.
-
-
-=head2 Loaded modules
-
-App::Framework::Base pre-loads the user namespace with the following modules: 
-
-	'Cwd', 
-	'File::Basename',
-	'File::Path',
-	'File::Temp',
-	'File::Spec',
-	'File::Find',
-	'File::Copy',
-	"File::DosGlob 'glob'",
-	
-	'Pod::Usage',
-	'Date::Manip',
-	'Getopt::Long qw(:config no_ignore_case)',
-	
-=head2 MySql support
-
-The 'sql' field may be specified as either a HASH ref or an ARRAY ref (where each ARRAY entry is a HASH ref). The HASH ref must
-contain sufficient information to create a L<App::Framework::Base::Sql> object. 
-
-Calling to the sql() method with no parameter will return the first created L<App::Framework::Base::Sql> object. Calling the sql() method with a string will
-return the L<App::Framework::Base::Sql> object created for the named database (i.e. sql objects are named by their database). The sql object can then be
-used as defined in L<App::Framework::Base::Sql>
-
+Base class for applications. Expected to be derived from by an implementable class (like App::Framework::Modules::Script).
 
 =head1 DIAGNOSTICS
 
@@ -119,7 +27,7 @@ Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, se
 
 =head1 AUTHOR
 
-Steve Price E<lt>linux@quartz-net.co.ukE<gt>
+Steve Price C<< <sdprice at cpan.org> >>
 
 =head1 BUGS
 
@@ -249,27 +157,6 @@ my %FIELDS = (
 	'_sql_hash'			=> {},
 		
 ) ;
-
-## TODO: Come up with a more flexible way of specifying this list (or adding to a base set, adding user-specific?)
-#my @MODULES = (
-#	'Cwd', 
-#	'File::Basename',
-#	'File::Path',
-#	'File::Temp',
-#	'File::Spec',
-#	'File::Find',
-#	'File::Copy',
-#	"File::DosGlob 'glob'",
-#	
-#	'Pod::Usage',
-#	'Date::Manip',
-#	'Getopt::Long qw(:config no_ignore_case)',
-#	
-#	'Sql',
-#) ;
-
-##	'App::Framework::Base::Object::DumpObj qw/prt_data/',
-	
 
 # Set of default options
 my @BASE_OPTIONS = (

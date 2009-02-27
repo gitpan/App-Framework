@@ -34,7 +34,8 @@ An array of the modules that will be imported into the application automatically
 	Pod::Usage
 	File::DosGlob qw(glob)
 	Date::Manip
-
+	Getopt::Long qw(:config no_ignore_case)
+	
 =cut
 
 our @MODULES = (

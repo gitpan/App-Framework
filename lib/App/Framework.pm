@@ -24,7 +24,12 @@ App::Framework - A framework for creating applications
 =head1 DESCRIPTION
 
 This class actually uses one of the framework sub-modules to provide it's "personality". By default that
-will be Script, but others will be available later (or if anyone adds their own).
+will be Script, but others will be available later (or if anyone adds their own). The personality is loaded
+into the framework at import time as part of the 'use':
+
+  use App::Framework qw/Script/ ;
+
+(As stated above, if no personality is specified then 'Script' will be assumed).
 
 The framework is intended to do most of the common tasks required to set up an application, being driven 
 predominantly by the applications "documentation" (see section L</DATA>).
@@ -148,22 +153,16 @@ During program execution, the following values can be accessed:
  * runobj = L<App::Framework::Base::Run> object
  
 
+=head2 Configuration
+
+App::Framework loads some settings from L<App::Framework::Config>. This may be modified on a site basis as required 
+(in a similar fashion to CPAN Config.pm). 
+
 
 =head2 Loaded modules
 
-App::Framework pre-loads the user namespace with the following modules: 
+App::Framework pre-loads the user namespace with some common modules. See L<App::Framework::Config> for the complete list. 
 
-	'Cwd', 
-	'File::Basename',
-	'File::Path',
-	'File::Temp',
-	'File::Spec',
-	'File::Find',
-	'File::Copy',
-	"File::DosGlob 'glob'",
-	
-	'Pod::Usage',
-	'Getopt::Long qw(:config no_ignore_case)',
 	
 =head2 MySql support
 
@@ -174,13 +173,27 @@ Calling to the sql() method with no parameter will return the first created L<Ap
 return the L<App::Framework::Base::Sql> object created for the named database (i.e. sql objects are named by their database). The sql object can then be
 used as defined in L<App::Framework::Base::Sql>
 
+=head2 Further details
+
+The actual functionality (and hence most of the methods) of the class is provided by L<App::Framework::Base> which should be referred to
+for complete documentation.
+
+The personalities are described in:
+
+=over 4
+
+=item * Script
+
+L<App::Framework::Modules::Script>
+
+=back
 
 =cut
 
 use strict ;
 use Carp ;
 
-our $VERSION = "0.01" ;
+our $VERSION = "0.02" ;
 
 
 #============================================================================================

@@ -18,7 +18,7 @@ Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, se
 
 =head1 AUTHOR
 
-Steve Price E<lt>linux@quartz-net.co.ukE<gt>
+Steve Price C<< <sdprice at cpan.org> >>
 
 =head1 BUGS
 

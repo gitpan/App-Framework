@@ -6,13 +6,13 @@ App::Framework::Script - Script application object
 
 =head1 SYNOPSIS
 
-	use App::Framework::Script ;
+	use App::Framework ;
 	
 	# VERSION
 	our $VERSION = '1.001' ;
 
 	# Create application and run it
-	App::Framework::Script->new()->go() ;
+	App::Framework->new()->go() ;
 
 	#----------------------------------------------------------------
 	# Define run subroutine, automatically called by App:Script->go()
@@ -70,7 +70,9 @@ App::Framework::Script - Script application object
 
 =head1 DESCRIPTION
 
-Derived object from App::Framework::Base. Adds command line script specific additions to base properties. Adds the following
+Derived object from App::Framework::Base. Should only be called via App::Framework import.
+
+Adds command line script specific additions to base properties. Adds the following
 additional options:
 
 	'log|L=s'			Specify a log file
@@ -88,7 +90,7 @@ Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, se
 
 =head1 AUTHOR
 
-Steve Price E<lt>linux@quartz-net.co.ukE<gt>
+Steve Price C<< <sdprice at cpan.org> >>
 
 =head1 BUGS
 
