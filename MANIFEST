@@ -24,5 +24,16 @@ Makefile.PL
 MANIFEST			This list of files
 README
 t/00-load.t
+t/01-Man.t
+t/02-Options.t
+t/03-Inc.t
+t/04-Args.t
+t/05-Data.t
+t/args
+t/args/dir
+t/args/exists
+t/args/file
+t/lib/MyAppLib.pm
+t/MyApp.pm
 t/pod-coverage.t
 t/pod.t

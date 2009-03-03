@@ -135,6 +135,8 @@ my %FIELDS = (
 	'post_run_fn'	=> undef,
 	'usage_fn'		=> undef,
 	
+	'exit_type'		=> 'exit',
+	
 	# Created during init
 	'package'		=> undef,
 	'filename'		=> undef,
@@ -170,8 +172,6 @@ my @BASE_OPTIONS = (
 ) ;
 
 # TODO: Auto read app config? Read in sql database name etc?
-
-
 
 
 #============================================================================================
@@ -338,7 +338,6 @@ sub set_paths
 	my $this = shift ;
 	my ($filename) = @_ ;
 
-	
 	# Follow links
 	$filename = File::Spec->rel2abs($filename) ;
 	while ( -l $filename)
@@ -348,14 +347,25 @@ sub set_paths
 	
 	# Get info
 	my ($progname, $progpath, $progext) = fileparse($filename, '\.[^\.]+') ;
-	$this->set(
-		'progname'	=> $progname,
-		'progpath'	=> $progpath,
-		'progext'	=> $progext,
-	) ;
+	if (ref($this))
+	{
+		# set if not class call
+		$this->set(
+			'progname'	=> $progname,
+			'progpath'	=> $progpath,
+			'progext'	=> $progext,
+		) ;
+	}
 
 	# Set up include path to add script home + script home /lib subdir
-	push @INC, ($progpath, "$progpath/lib") ;
+	my %inc = map {$_=>1} @INC ;
+	foreach my $path ($progpath, "$progpath/lib")
+	{
+		# add new paths
+     	unshift(@INC,$path) unless exists $inc{$path} ;
+     	$inc{$path} = 1 ;
+		push @INC, $path unless exists $inc{$path} ;
+	}
 }
 
 #----------------------------------------------------------------------------
@@ -804,8 +814,11 @@ sub getopts
 		# Get args
 		my $arglist = $this->arglist() ;
 		push @$arglist, @ARGV ;
+
+		$this->prt_data("getopts() : arglist=", $arglist) if $this->debug >= 2 ;
 	}
 	
+
 	return $ok ;
 }
 
@@ -1018,6 +1031,11 @@ sub run
 	{
 		my $type = $opts{'man'} ? 'man' : 'help' ;
 		$this->usage($type) ;
+		$this->exit(0) ;
+	}
+	if ($opts{'pod'})
+	{
+		print $this->pod() ;
 		$this->exit(0) ;
 	}
 	
@@ -1686,13 +1704,22 @@ print "_parse_options($data_aref)\n" if $this->debug()>=2 ;
 			my ($new_spec, $new_summary, $new_default, $new_default_val) = ($1, $2, $3, $4) ;
 			print " + spec: $new_spec,  summary: $new_summary,  default: $new_default, defval=$new_default_val\n" if $this->debug()>=2 ;
 
-			# Remove leading/trailing space
-			$description =~ s/^\s+// ;
-			$description =~ s/\s+$// ;
+			# Allow default value to be specified with "" or ''
+			$new_default_val ||= "" ;
+			$new_default_val =~ s/^['"](.*)['"]$/$1/ ;
+
+			# Save previous option			
+			if ($spec)
+			{
+				# Remove leading/trailing space
+				$description ||= '' ;
+				$description =~ s/^\s+// ;
+				$description =~ s/\s+$// ;
+
+				push @options, [$spec, $summary, $description, $default_val] ;
+			}
 			
-			# Save option			
-			push @options, [$spec, $summary, $description, $default_val] if $spec ;
-			
+			# update current
 			($spec, $summary, $default_val, $description) = ($new_spec, $new_summary, $new_default_val, '') ;
 		}
 		elsif ($spec)
@@ -1703,7 +1730,15 @@ print "_parse_options($data_aref)\n" if $this->debug()>=2 ;
 	}
 
 	# Save option
-	push @options, [$spec, $summary, $description, $default_val] if $spec ;
+	if ($spec)
+	{
+		# Remove leading/trailing space
+		$description ||= '' ;
+		$description =~ s/^\s+// ;
+		$description =~ s/\s+$// ;
+
+		push @options, [$spec, $summary, $description, $default_val] ;
+	}
 	
 	return @options ;
 }
@@ -1750,6 +1785,7 @@ print "_expand_vars() - START\n" if $this->debug()>=2 ;
 		next if ref($fields{$field}) ;
 		
 		# First see if this contains a '$'
+		$fields{$field} ||= "" ;
 		my $ix = index $fields{$field}, '$' ; 
 		if ($ix >= 0)
 		{
@@ -1840,9 +1876,11 @@ sub _process_nameargs
 {
 	my $this = shift ;
 
-	my $nameargs = $this->nameargs() ;
+	my $nameargs = $this->nameargs() || "" ;
 	my $arginfo_href = $this->_arg_info() ;
 
+	print "_process_nameargs($nameargs)\n" if $this->debug ;
+	
 	my @namespecs = split /[\s,]+/, $nameargs ;
 	
 	my $ix=0 ;
@@ -1855,6 +1893,8 @@ sub _process_nameargs
 			($name, $flags) = ($1, $2);
 		}
 		$name ||= $ix ;
+
+		print "  name: $name\n" if $this->debug ;
 		
 		# get flags
 		#  ? arg is optional
@@ -2005,15 +2045,23 @@ sub _check_args
 
 	my $args_aref = $this->arglist() ;
 	my $arginfo_href = $this->_arg_info() ;
+	my $arghash = $this->arghash() ;
+
 	foreach my $name (sort {$arginfo_href->{$a}{'index'} <=> $arginfo_href->{$b}{'index'}} keys %$arginfo_href)
 	{
 $this->prt_data("item $name=",$arginfo_href->{$name}) if $this->debug()>=2 ;
 
 		my $flags_href = $arginfo_href->{$name}{'flags'} ;
 
+		# arg value
+		my $idx = $arginfo_href->{$name}{'index'} ;
+		my $value = $idx < scalar(@$args_aref) ? $args_aref->[$idx] : undef ;
+
+		## Build arghash
+		$arghash->{$name} = $value ;
+
 		# skip if optional
 		next if $flags_href->{'optional'} ;
-
 
 		my $type = "" ;
 		if ($flags_href->{'file'})
@@ -2024,9 +2072,6 @@ $this->prt_data("item $name=",$arginfo_href->{$name}) if $this->debug()>=2 ;
 		{
 			$type = "directory " ;
 		}
-
-		# arg value
-		my $value = $args_aref->[$arginfo_href->{$name}{'index'}] ;
 
 print " + checking value=$value, type=$type ..\n" if $this->debug()>=2 ;
 		
@@ -2060,6 +2105,7 @@ print " + Check $value for existence\n" if $this->debug()>=2 ;
 				$this->exit(1) ;
 			}
 		}
+		
 	}
 # TODO: Replace the above with some better error handling
 
@@ -2109,6 +2155,17 @@ no strict "refs" ;
         } 
      }
 }
+
+##============================================================================================
+## BEGIN 
+##============================================================================================
+#
+## set up @INC for subsequent 'use' modules
+#BEGIN
+#{
+#	## Set program info
+#	App::Framework::Base->set_paths($ARGV[0]) ;
+#}
 
 
 # ============================================================================================

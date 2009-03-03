@@ -11,7 +11,8 @@ use Sql ;
 
 =head1 DESCRIPTION
 
-
+Provides a simplified interface to MySQL via DBI.
+ 
 =head1 DIAGNOSTICS
 
 Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
@@ -24,6 +25,9 @@ Steve Price E<lt>sdprice@sdprice.plus.comE<gt>
 
 None that I know of!
 
+NOTE: To avoid the common "Mysql server gone away" problem, everywhere that I get the database connection handle, I actually call
+the connect() method to ensure the connection is working.
+
 =head1 INTERFACE
 
 =over 4
@@ -34,7 +38,7 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "2.008" ;
+our $VERSION = "2.009" ;
 
 #============================================================================================
 # USES
@@ -717,7 +721,7 @@ if ($this->debug())
 #$this->prt_data("Values=", $values_aref, "\n--------------------\nVars=", \%vars) ;
 
 	## Use given/created command sql
-	my $dbh = $this->dbh() ;
+	my $dbh = $this->connect() ;
 	$this->throw_fatal("No database created", 1) unless $dbh ;
 	
 	my $sth ;
@@ -980,7 +984,7 @@ sub tables
 	my $this = shift ;
 	
 	# return result
-	return $this->dbh()->tables() ;
+	return $this->connect()->tables() ;
 }
 
 

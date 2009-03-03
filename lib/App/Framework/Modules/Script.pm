@@ -277,7 +277,18 @@ sub exit
 	my $this = shift ;
 	my ($exit_code) = @_ ;
 
-	exit $exit_code ;
+print "EXIT: $exit_code\n" if $this->debug ;
+
+	my $exit_type = $this->exit_type() ;
+	if (lc($exit_type) eq 'die')
+	{
+		die '' ;
+	}
+	else
+	{
+		exit $exit_code ;
+	}
+
 }
 
 #----------------------------------------------------------------------------
@@ -292,6 +303,8 @@ sub catch_error
 {
 	my $this = shift ;
 	my ($error) = @_ ;
+
+print "catch_error()\n" if $this->debug ;
 
 #TODO: This is just the App::Framework::Base::Object::ErrorHandle default_error_handler() code - could just use that (return handled=0)
 	my $handled = 0 ;
@@ -377,6 +390,11 @@ sub script_usage
 {
 	my $this = shift ;
 	my ($app, $level) = @_ ;
+
+$this->debug(1);
+print "Start of script_usage($level)\n" if $this->debug ;
+	
+	$level ||= "" ;
 	
 	# TODO: Work out a better way to convert pod without the use of external file!
 	
@@ -402,12 +420,16 @@ sub script_usage
 #	system("perldoc",  $fname) ;
 	pod2usage(
 		-verbose	=> $verbose,
-		-exitval	=> $exitval,
+#		-exitval	=> $exitval,
+		-exitval	=> 'noexit',
 		-input		=> $fname,
+-noperldoc =>1,
 		
 		-title => $this->name(),
 		-section => 1,
 	) ;
+
+print "End of script_usage()\n" if $this->debug ;
 	
 	# remove temp file
 	unlink $fname ;

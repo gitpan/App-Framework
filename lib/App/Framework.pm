@@ -117,41 +117,101 @@ automatically create the application pod, man, and usage pages.
 
 Similarly, the $VERSION variable in the calling namespace is detected and used to set the application version number.
 
-In addition to specifying teh application settings, additional named __DATA__ sections can be created. These named sections are then accessed
+In addition to specifying the application settings, additional named __DATA__ sections can be created. These named sections are then accessed
 via $app->data($name) to recover the text string (or an array of the text lines). Named data sections are specified as:
 
     __DATA__ name
 
-=head2 FIELDS
+=head2 Named Arguments
 
-The following fields should be defined either in the call to 'new()' or as part of the application configuration in the __DATA__ section:
+The [NAMEARGS] section is used to specify the expected command line arguments used with the application. These "named arguments" provide
+a mechanism for the framework to determine if all required arguments have been specified (generating an error message if not), creates
+the application documentation showing these required arguments, and allows for easier access to the arguments in the application itself.
 
- * name = Program name (default is name of program)
- * summary = Program summary text
- * synopsis = Synopsis text (default is program name and usage)
- * description = Program description text
- * history = Release history information
- * version = Program version (default is value of 'our $VERSION')
- * options = Definition of program options (see below)
- * nameargs = Definition of the program arguments and their intended usage (see below)
- * sql = Definition of sql database connection & queries (see below)
+Along with specifying the name of arguments, specification of
+certain properties of those arguments is provided for. 
+
+Argument properties allow you to:
+ * specify if arg is optional
+ * specify if arg is a file/dir
+ * specify if arg is expected to exist (autocheck existence; autocreate dir if output?)
+ * specify if arg is an executable (autosearch PATH so don't need to specify full path?)
+ * ?flag arg as an input or output (for filters, simple in/out scripts)?
+ * ?specify arg expected to be a link?
  
- * pre_run_fn = Function called before run() function (default is application-defined 'pre_run' subroutine if available)
- * run_fn = Function called to execute program (default is application-defined 'run' subroutine if available)
- * post_run_fn = Function called after run() function (default is application-defined 'post_run' subroutine if available)
- * usage_fn = Function called to display usage information (default is application-defined 'usage' subroutine if available)
+Specification is the format:
 
-During program execution, the following values can be accessed:
+   name:flags
 
- * arglist = Array of the program arguments, in the order they were specified
- * arghash = Hash of the program arguments, named by the 'nameargs' field
- * package = Name of the application package (usually main::)
- * filename = Full filename path to the application (after following any links)
- * progname = Name of the program (without path or extension)
- * progpath = Pathname to program
- * progext = Extension of program
- * runobj = L<App::Framework::Base::Run> object
+i.e. name with optional flags (indicated by a leading :)
+
+Valid flags: 
+  ? arg is optional
+  f file
+  d dir
+  e exists
+  i input
+  o output
+  - dummy flag (see below)
+
+If names not required, can just specify flags e.g.:
+
+  [NAMEARGS]
+  :-
+  :- 
+  :- 
+  :?
+
+Examples:
+
+  [NAMEARGS]
+  in:if 	# 'in' is an input file
+  out:of	# 'out' is an output file
+  dir:d 	# 'dir' is a directory
+  temp:?d 	# 'temp' is optional and a directory
+
+By default, any arg with the f,d,e flag is assumed to be an input and doesn't need the 'i' flag. Also, any argument marked as input
+is checked for existence and generates an error if it does not exist.
+
+
+=head2 Options
+
+The [OPTIONS] section is used to specify extra command line options for the application. The specification is used
+both to create the code necessary to gather the option information (and provide it to the application), but also to
+create application documentation (with the -help, -man options).
+
+Each option specification is a multiline definition of the form:
+
+   -option[=s]	Option summary [default=optional default]
  
+   Option description
+ 
+The -option specification can contain multiple strings separated by '|' to provide aliases to the same option. The first specified
+string will be used as the option name. Alternatively, you may surround the preferred option name with '' quotes:
+
+  -n|'number'=s
+  
+The option names/values are stored in a hash retrieved as $app->options():
+
+  my %opts = $app->options();
+  
+Each option specification can optional append '=s' to the name to specify that the option expects a value (otherwise the option is treated
+as a boolean flag), and a default value may be specified enclosed in '[]'.
+
+=head2 Description
+
+The description text will be reproduced when the -help or -man option is specified. Note that the variables described in L</FIELDS> will be expanded.
+
+=head2 @INC path
+
+App::Framework automatically pushes some extra directories at the start of the Perl include library path. This allows you to 'use' application-specific
+modules without having to install them globally on a system. The path of the executing Perl application is found by following any links until
+an actually Perl file is found. The @INC array has the following added:
+
+	* $progpath
+	* $progpath/lib
+	
+i.e. The directory that the Perl file resides in, and a sub-directory 'lib' will be searched for application-specific modules.
 
 =head2 Configuration
 
@@ -173,6 +233,38 @@ Calling to the sql() method with no parameter will return the first created L<Ap
 return the L<App::Framework::Base::Sql> object created for the named database (i.e. sql objects are named by their database). The sql object can then be
 used as defined in L<App::Framework::Base::Sql>
 
+=head2 FIELDS
+
+The following fields should be defined either in the call to 'new()' or as part of the application configuration in the __DATA__ section:
+
+ * name = Program name (default is name of program)
+ * summary = Program summary text
+ * synopsis = Synopsis text (default is program name and usage)
+ * description = Program description text
+ * history = Release history information
+ * version = Program version (default is value of 'our $VERSION')
+ * options = Definition of program options (see below)
+ * nameargs = Definition of the program arguments and their intended usage (see below)
+ * sql = Definition of sql database connection & queries (see below)
+
+ * pre_run_fn = Function called before run() function (default is application-defined 'pre_run' subroutine if available)
+ * run_fn = Function called to execute program (default is application-defined 'run' subroutine if available)
+ * post_run_fn = Function called after run() function (default is application-defined 'post_run' subroutine if available)
+ * usage_fn = Function called to display usage information (default is application-defined 'usage' subroutine if available)
+
+During program execution, the following values can be accessed:
+
+ * arglist = Array of the program arguments, in the order they were specified
+ * arghash = Hash of the program arguments, named by the 'nameargs' field
+ * package = Name of the application package (usually main::)
+ * filename = Full filename path to the application (after following any links)
+ * progname = Name of the program (without path or extension)
+ * progpath = Pathname to program
+ * progext = Extension of program
+ * runobj = L<App::Framework::Base::Run> object
+ 
+
+
 =head2 Further details
 
 The actual functionality (and hence most of the methods) of the class is provided by L<App::Framework::Base> which should be referred to
@@ -193,7 +285,9 @@ L<App::Framework::Modules::Script>
 use strict ;
 use Carp ;
 
-our $VERSION = "0.02" ;
+use App::Framework::Base ;
+
+our $VERSION = "0.03" ;
 
 
 #============================================================================================
@@ -225,8 +319,8 @@ sub import
 {
     my $pkg     = shift;
     my $callpkg = caller(0);
-    my $pattern = ( $callpkg eq 'main' ) ? '^:::' : "^$callpkg\$";
     
+#print "Framework import from $callpkg\n" ;
     
     my $verbose = 0;
     my $item;
@@ -234,9 +328,23 @@ sub import
 
     for $item (@_) 
     {
-    	print " + item: $item\n" ;
     	$imports{$callpkg} = $item ;
     }
+
+	# Get name of requested personality
+	my $personality = ($imports{$callpkg} || 'Script' ) ;
+	my $module =  "App::Framework::Modules::$personality" ; 
+#print "require $module....\n" ;
+	eval "require $module;" ;
+	croak "Sorry, App:Framework does not support personality \"$personality\"" if $@ ;
+
+	## Create ourself as if we're an object of the required type	
+	@ISA = ( $module ) ;
+
+
+	## Set library paths
+	my ($package, $filename, $line, $subr, $has_args, $wantarray) = caller(0) ;
+	App::Framework::Base->set_paths($filename) ;
     
 }
 
@@ -261,15 +369,6 @@ sub new
 	my $class = ref($obj) || $obj ;
     my $callpkg = caller(0);
 	
-	# Get name of requested personality
-	my $personality = ($imports{$callpkg} || 'Script' ) ;
-	my $module =  "App::Framework::Modules::$personality" ; 
-	eval "require $module;" ;
-	croak "Sorry, App:Framework does not support personality \"$personality\"" if $@ ;
-
-	## Create ourself as if we're an object of the required type	
-	@ISA = ( $module ) ;
-
 	# Create object
 	my $this = $class->SUPER::new(
 		%args, 
@@ -280,7 +379,6 @@ sub new
 
 	return($this) ;
 }
-
 
 =back
 

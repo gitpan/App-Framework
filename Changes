@@ -1,5 +1,8 @@
 Revision history for App-Framework
 
+0.03    Tue Mar 03 15:55:56 2009
+        Better testing, better documentation, various bug fixes.
+
 0.02    Fri Feb 27 08:38:56 2009
         Fixed MANIFEST.SKIP (and MANIFEST).
 
