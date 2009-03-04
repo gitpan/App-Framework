@@ -391,10 +391,12 @@ sub script_usage
 	my $this = shift ;
 	my ($app, $level) = @_ ;
 
-$this->debug(1);
-print "Start of script_usage($level)\n" if $this->debug ;
-	
 	$level ||= "" ;
+
+#$this->debug(1);
+	
+
+print "Start of script_usage($level)\n" if $this->debug ;
 	
 	# TODO: Work out a better way to convert pod without the use of external file!
 	

@@ -287,7 +287,7 @@ use Carp ;
 
 use App::Framework::Base ;
 
-our $VERSION = "0.03" ;
+our $VERSION = "0.04" ;
 
 
 #============================================================================================
@@ -421,9 +421,6 @@ L<http://cpanratings.perl.org/d/App-Framework>
 L<http://search.cpan.org/dist/App-Framework/>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
 
 
 =head1 COPYRIGHT & LICENSE
