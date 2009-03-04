@@ -29,6 +29,7 @@ t/02-Options.t
 t/03-Inc.t
 t/04-Args.t
 t/05-Data.t
+t/args/dir/dummy
 t/args/exists
 t/args/file
 t/lib/MyAppLib.pm

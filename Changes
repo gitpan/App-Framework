@@ -1,5 +1,8 @@
 Revision history for App-Framework
 
+0.05    Wed Mar 04 13:29:00 2009
+        Corrected MANIFEST problem that caused t/04-Args.t test to fail.
+
 0.04    Wed Mar 04 08:07:00 2009
         Various bug fixes.
 
