@@ -49,9 +49,9 @@ my $VERBOSE=0;
 	} ;
 
 	like  ($stdout, qr/Must specify input file "source"/im);
-	like  ($stdout, qr/-h|help               Print help/im);
+	like  ($stdout, qr/-'help'|h               Print help/im);
 	like  ($stdout, qr/-man                  Full documentation/im);
-	like  ($stdout, qr/-n|name=s             Test name/im);
+	like  ($stdout, qr/-'name'|n <arg>             Test name/im);
 	like  ($stdout, qr/-nomacro              Do not create test macro calls/im);
 	
 	## Manual pages

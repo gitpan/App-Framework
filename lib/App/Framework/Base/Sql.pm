@@ -6,7 +6,7 @@ Sql - MySql interface
 
 =head1 SYNOPSIS
 
-use Sql ;
+use App::Framework::Base::Sql ;
 
 
 =head1 DESCRIPTION
@@ -38,15 +38,25 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "2.009" ;
+our $VERSION = "2.010" ;
 
 #============================================================================================
 # USES
 #============================================================================================
 use App::Framework::Base::Object::Logged ;
 
-use DBI();
-use Date::Manip ;
+## Get Sql modules - don't allow object creation without these
+our $SQL = 0 ;
+BEGIN
+{
+	my $ok = 1 ;
+	foreach my $mod (qw/DBI Date::Manip/)
+	{
+		eval "require $mod;" ;	
+		$ok = 0 if ($@) ;	
+	}
+	$SQL = $ok ;
+}
 
 
 
@@ -325,6 +335,13 @@ The full list of possible arguments are :
 sub new
 {
 	my ($obj, %args) = @_ ;
+	
+	## No object creation if not got modules
+	unless ($SQL)
+	{
+		carp "Cannot create Sql object as DBI modules not installed" ;
+		return undef ;
+	}
 
 	my $class = ref($obj) || $obj ;
 

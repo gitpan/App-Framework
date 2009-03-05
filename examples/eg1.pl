@@ -5,7 +5,7 @@ use strict ;
 use App::Framework ;
 
 # VERSION
-our $VERSION = '1.000' ;
+our $VERSION = '1.001' ;
 
 
 	# Create application and run it
@@ -51,6 +51,12 @@ An example of using the application framework with named arguments
 [NAMEARGS]
 
 src_dir:id backup_dir:id
+
+[OPTIONS]
+
+-database=s	Database name [default=test]
+
+Specify the database name to use
 
 [DESCRIPTION]
 

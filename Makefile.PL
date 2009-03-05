@@ -20,6 +20,8 @@ requires       'Pod::Usage';
 requires       'Date::Manip';
 requires       'Getopt::Long';
 
+recommends     'DBI' ;
+
 test_requires  'Test::More'  => '0.42';
 test_requires  'Test::Pod'  => '1.22';
 test_requires  'Test::Pod::Coverage'  => '1.08';

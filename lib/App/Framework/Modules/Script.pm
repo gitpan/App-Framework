@@ -425,7 +425,7 @@ print "Start of script_usage($level)\n" if $this->debug ;
 #		-exitval	=> $exitval,
 		-exitval	=> 'noexit',
 		-input		=> $fname,
--noperldoc =>1,
+		-noperldoc =>1,
 		
 		-title => $this->name(),
 		-section => 1,
@@ -435,6 +435,7 @@ print "End of script_usage()\n" if $this->debug ;
 	
 	# remove temp file
 	unlink $fname ;
+
 }
 
 

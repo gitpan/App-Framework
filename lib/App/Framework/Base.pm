@@ -42,7 +42,7 @@ None that I know of!
 use strict ;
 use Carp ;
 
-our $VERSION = "1.005" ;
+our $VERSION = "1.007" ;
 
 
 #============================================================================================
@@ -167,11 +167,11 @@ my @BASE_OPTIONS = (
 	['man',				'Full documentation', 'Show full man page then exit' ],
 	['pod',				'Output full pod', 	'Show full man page as pod then exit' ],
 
-	['debug-show-data',			'Debug option: Show __DATA__', 				'Show __DATA__ definition in script then exit' ],
-	['debug-show-data-array',	'Debug option: Show all __DATA__ items', 	'Show all processed __DATA__ items then exit' ],
+	['dbg-data',		'Debug option: Show __DATA__', 				'Show __DATA__ definition in script then exit' ],
+	['dbg-data-array',	'Debug option: Show all __DATA__ items', 	'Show all processed __DATA__ items then exit' ],
 ) ;
 
-# TODO: Auto read app config? Read in sql database name etc?
+our %LOADED_MODULES ;
 
 
 #============================================================================================
@@ -254,12 +254,13 @@ sub new
 	$this->runobj(App::Framework::Base::Run->new()) ;
 	
 	## Set up default timezone
-	my %modules = map {$_=>1} @App::Framework::Config::MODULES ;
-	if (exists($modules{'Date::Manip'}))
+	if (exists($LOADED_MODULES{'Date::Manip'}))
 	{
 		my $tz = $App::Frameowrk::Config::DATE_TZ || 'GMT' ;
 		my $fmt = $App::Frameowrk::Config::DATE_FORMAT || 'non-US' ;
+		eval {
 		&Date_Init("TZ=$tz", "DateFormat=$fmt") ;
+		} ;
 	}
 
 	return($this) ;
@@ -437,7 +438,11 @@ sub sql
 			
 			# Create new Sql object & check for errors
 			my $sql = App::Framework::Base::Sql->new(%$sql_spec) ;
-			if ($sql->error())
+			if (!$sql)
+			{
+				$this->throw_fatal("Unable to create Sql object") ;
+			}
+			elsif ($sql->error())
 			{
 				$this->rethrow_error($sql->error()) ;
 			}
@@ -696,7 +701,7 @@ POD_HEAD
 		{
 			$default = "[Default: $option_entry_href->{'default'}]" ;
 		}
-		$pod .= sprintf "       -%-20s $option_entry_href->{summary}\t$default\n", $option_entry_href->{'spec'} ;
+		$pod .= sprintf "       -%-20s $option_entry_href->{summary}\t$default\n", $option_entry_href->{'pod_spec'} ;
 	}
 	
 	unless (@$options_fields_aref)
@@ -737,7 +742,8 @@ POD_OPTIONS
 			$default = "[Default: $option_entry_href->{'default'}]" ;
 		}
 
-		$pod .= "=item B<-$option_entry_href->{spec}> $default\n" ;
+##		$pod .= "=item B<-$option_entry_href->{pod_spec}> $default\n" ;
+		$pod .= "=item -$option_entry_href->{pod_spec} $default\n" ;
 		$pod .= "\n$option_entry_href->{description}\n\n" ;
 	}
 
@@ -900,6 +906,32 @@ $this->prt_data("options() set: options spec=", $options_aref) if $this->debug()
 			# Set default if required
 			$options_href->{$field} = $default_val if (defined($default_val)) ;
 			
+			# re-create spec with field name highlighted
+			my $spec = $option_spec ;
+			my $arg = "";
+			if ($spec =~ s/\=(.*)$//)
+			{
+				$arg = $1 ;
+			}
+print "options() set: pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
+
+			my @fields = split /\|/, $spec ;
+			if (@fields > 1)
+			{
+				# put field name first
+				$spec = "'$field'" ;
+				foreach my $fld (@fields)
+				{
+					next if $fld eq $field ;
+					
+	print " + $fld\n" if $this->debug()>=2 ;
+					$spec .= '|' if $spec;
+					$spec .= $fld ;
+				}	
+			}
+			$spec .= " <arg>" if $arg ;
+print "options() set: final pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
+				
 			# Add to Getopt list
 			push @$get_options_aref, $option_spec => \$options_href->{$field} ;
 			push @{$options_fields_aref}, {
@@ -908,9 +940,11 @@ $this->prt_data("options() set: options spec=", $options_aref) if $this->debug()
 					'summary'=>$summary, 
 					'description'=>$description,
 					'default'=>$default_val,
+					'pod_spec'=>$spec,
 			} ;
 		}
 $this->prt_data("options() set: Getopts spec=", $get_options_aref) if $this->debug()>=2 ;
+$this->prt_data("_option_fields() set: ", $options_fields_aref) if $this->debug()>=2 ;
 		
 	}
 print "options() - END\n" if $this->debug()>=2 ;
@@ -1280,18 +1314,25 @@ sub _import
 	}
 	
 	# Get modules into this namespace
-	eval $code ;
-	if ($@)
+	foreach my $mod (@App::Framework::Config::MODULES)
 	{
-		croak "Unable to load modules : $@\n" ;
-	}	
+		eval "use $mod;" ;
+		if ($@)
+		{
+			warn "Unable to load module $mod\n" ;
+		}	
+		else
+		{
+			++$LOADED_MODULES{$mod} ;
+		}
+	}
 
 	# Get modules into caller package namespace
 	eval "package $package;\n$code\n" ;
-	if ($@)
-	{
-		croak "Unable to load modules : $@\n" ;
-	}	
+#	if ($@)
+#	{
+#		warn "Unable to load modules : $@\n" ;
+#	}	
 }
 
 

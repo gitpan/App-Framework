@@ -1,5 +1,8 @@
 Revision history for App-Framework
 
+0.06    Thu Mar 05 15:09:00 2009
+        Updated script pod. Modified so that scripts can be used without DBI. Corrected build fail when DBI not installed.
+
 0.05    Wed Mar 04 13:29:00 2009
         Corrected MANIFEST problem that caused t/04-Args.t test to fail.
 
