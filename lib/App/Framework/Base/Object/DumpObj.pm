@@ -73,6 +73,7 @@ our @EXPORT_OK	=qw(
 our $DEBUG = 0 ;
 our $VERBOSE = 0 ;
 our $PRINT_OBJECTS = 0 ;
+our $QUOTE_VALS = 0 ;
 
 my $level ;
 my %already_seen ;
@@ -160,6 +161,33 @@ sub print_objects_flag
 	return $old ;
 }
 
+
+#---------------------------------------------------------------------------------------------------
+
+=item C<App::Framework::Base::Object::DumpObj::quote_vals_flag($flag)>
+
+Set option quoting the values to B<$flag>. 
+
+ 0 = Do not quote values [DEFAULT]
+ 1 = Print values inside quotes
+ 
+This is useful for re-using the output directly to define an array/hash
+
+=cut
+
+sub quote_vals_flag
+{
+	my ($flag) = @_ ;
+
+	my $old = $QUOTE_VALS ;
+
+	if (defined($flag)) 
+	{
+		# set this module debug flag & sub-modules
+		$QUOTE_VALS = $flag ; 
+	}
+	return $old ;
+}
 
 
 

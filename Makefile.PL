@@ -3,9 +3,13 @@ use warnings;
 use inc::Module::Install;
   
 # Define metadata
-name           'App-Framework';
-all_from       'lib/App/Framework.pm';
-author         'Steve Price <sdprice@cpan.org>';
+name            'App-Framework';
+abstract_from	'lib/App/Framework.pm' ;
+author_from	'lib/App/Framework.pm' ;
+version_from	'lib/App/Framework.pm' ;
+license_from	'lib/App/Framework.pm' ;
+perl_version	'5.8.4' ;
+##all_from       'lib/App/Framework.pm';
   
 # Specific dependencies
 requires       'Cwd'; 

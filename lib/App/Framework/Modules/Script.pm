@@ -2,7 +2,7 @@ package App::Framework::Modules::Script ;
 
 =head1 NAME
 
-App::Framework::Script - Script application object
+App::Framework::Modules::Script - App::Framework command line script personality
 
 =head1 SYNOPSIS
 
@@ -23,7 +23,7 @@ App::Framework::Script - Script application object
 		my %opts = $app->options() ;
 		my @namelist = @{$app->arglist()}; 
 	
-		# DO APPLIC|ATION HERE
+		# DO APPLICATION HERE
 		
 	}
 	
@@ -158,14 +158,9 @@ sub new
 
 	my $class = ref($obj) || $obj ;
 	
-	# Need to look 2 level higher than this wrapper i.e. look at this wrapper's caller
-	# If this object is being used as a base for another object then use the '_caller' arg specified
-	my $call_level = delete $args{'_caller'} || 2 ;
-
 	# Create object
 	my $this = $class->SUPER::new(
 		%args, 
-		'_caller'	=> $call_level,
 	) ;
 	$this->set(
 		'usage_fn' 	=> sub {$this->script_usage(@_);}, 
@@ -334,7 +329,7 @@ print "catch_error()\n" if $this->debug ;
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base-E<gt>run_cmd($cmd, [$cmd_args, [$exit_on_fail]])>
+=item C<App::Framework::Modules::Script-E<gt>run_cmd($cmd, [$cmd_args, [$exit_on_fail]])>
 
 Execute a specified command, return either the exit status [0=success] (in scalar context) or the 
 array of lines output by the command (in array context)
@@ -405,14 +400,15 @@ print "Start of script_usage($level)\n" if $this->debug ;
 	my $fname = $fh->filename;
 	
 	# write pod
-	print $fh $this->pod() ;
+	my $developer = $level eq 'man-dev' ? 1 : 0 ;
+	print $fh $this->pod($developer) ;
 	close $fh ;
 
 	# pod2usage 
 	my ($exitval, $verbose) = (0, 0) ;
 	($exitval, $verbose) = (2, 0) if ($level eq 'opt') ;
 	($exitval, $verbose) = (1, 0) if ($level eq 'help') ;
-	($exitval, $verbose) = (0, 2) if ($level eq 'man') ;
+	($exitval, $verbose) = (0, 2) if ($level =~ /^man/) ;
 
 #print "level=$level, exit=$exitval, verbose=$verbose\n";
 

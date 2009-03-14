@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #
 use strict ;
-use Test::More tests => 10;
+use Test::More ;
 
 use App::Framework ;
 
@@ -15,8 +15,33 @@ my $VERBOSE=0;
 	my $stderr="" ;
 
 	diag( "Testing usage" );
+	
+	my @sections = qw/NAME SYNOPSIS OPTIONS DESCRIPTION/ ;
+	my @man = (
+		'Must specify input file "source"',
+		'-help|h               Print help',
+		'-man                  Full documentation',
+		'-name|n <arg>             Test name',
+		'-nomacro              Do not create test macro calls',
+		'-int <integer>        An integer',
+		'-float <float>        An float',
+		'-array <string>       An array           \(option may be specified multiple times\)',
+		'-hash <key=value>     A hash             \(option may be specified multiple times\)',
+	) ;
+	my @mandev = (
+		'-pod                  Output full pod',
+		'-dbg-data             Debug option: Show __DATA__',
+		'-dbg-data-array       Debug option: Show all __DATA__ items',
+		'-int=i                An integer',
+		'-float=f              An float',
+		'-array=s@             An array',
+		'-hash=s%              A hash',
+	) ;
 
+	plan tests => 1 + scalar(@sections) + scalar(@man) + scalar(@mandev) ;
+	
 	## Standard error catch with usage
+	my $app = App::Framework->new('exit_type'=>'die') ;
 	
 	# Expect output (stdout):
 	#
@@ -29,14 +54,15 @@ my $VERBOSE=0;
 	#           -debug=s              Set debug level    
 	#           -h|help               Print help 
 	#           -man                  Full documentation 
-	#           -pod                  Output full pod    
-	#           -debug-show-data      Debug option: Show __DATA__        
-	#           -debug-show-data-array Debug option: Show all __DATA__ items     
 	#           -log|L=s              Log file   
 	#           -v|verbose            Verbose output     
 	#           -dryrun|norun         Dry run    
 	#           -n|name=s             Test name  
 	#           -nomacro              Do not create test macro calls
+	#           -int <integer>        An integer
+	#           -float <float>        An float
+	#           -array <string>       An array           (option may be specified multiple times)
+	#           -hash <key=value>     A hash             (option may be specified multiple times)	
 	#
 	eval{
 		local *STDOUT ;
@@ -45,15 +71,17 @@ my $VERBOSE=0;
 		open(STDOUT, '>', \$stdout)  or die "Can't open STDOUT: $!" ;
 		open(STDERR, '>', \$stderr) or die "Can't open STDERR: $!";
 	
-		App::Framework->new('exit_type'=>'die')->go() ;
+#		App::Framework->new('exit_type'=>'die')->go() ;
+		$app->go() ;
 	} ;
 
-	like  ($stdout, qr/Must specify input file "source"/im);
-	like  ($stdout, qr/-'help'|h               Print help/im);
-	like  ($stdout, qr/-man                  Full documentation/im);
-	like  ($stdout, qr/-'name'|n <arg>             Test name/im);
-	like  ($stdout, qr/-nomacro              Do not create test macro calls/im);
-	
+	foreach my $test (@man)
+	{
+		like  ($stdout, qr/$test/im);
+	}
+
+
+
 	## Manual pages
 	
 	#	NAME
@@ -132,15 +160,34 @@ my $VERBOSE=0;
 		open(STDOUT, '>', \$stdout)  or die "Can't open STDOUT: $!" ;
 		open(STDERR, '>', \$stderr) or die "Can't open STDERR: $!";
 	
-		push @ARGV, '-man' ;
-		App::Framework->new('exit_type'=>'die')->go() ;
+		push @ARGV, '-man-dev' ;
+#		App::Framework->new('exit_type'=>'die')->go() ;
+		$app->go() ;
 		pop @ARGV ;
 	} ;
+
+	#           -pod                  Output full pod
+	#           -dbg-data             Debug option: Show __DATA__
+	#           -dbg-data-array       Debug option: Show all __DATA__ items
+	#           -log|L=s              Override the log   [Default: tmp.log]
+	#           -v|verbose            Verbose output
+	#           -dryrun|norun         Dry run
+	#           -database=s           Database name      [Default: test]
+	#           -int=i                An integer
+	#           -float=f              An float
+	#           -array=s@             An array
+	#           -hash=s%              A hash
+	#
+	foreach my $test (@mandev)
+	{
+		like  ($stdout, qr/$test/im);
+	}
+	
 
 	# split into sections then check the sections
 	my %man = split_man($stdout) ;
 	
-	foreach my $section (qw/NAME SYNOPSIS OPTIONS DESCRIPTION/)
+	foreach my $section (@sections)
 	{
 		ok(exists($man{$section})) ;
 	}
@@ -227,6 +274,22 @@ Normally the script automatically inserts a call to 'test_start' at the beginnin
 of the test. In both cases, the macros are called with the quoted string that is the full 'path' of the test name. 
 
 The test path being the menu names, separated by '::' down to the actual test name
+
+-int=i		An integer
+
+Example of integer option
+
+-float=f	An float
+
+Example of float option
+
+-array=s@	An array
+
+Example of an array option
+
+-hash=s%	A hash
+
+Example of a hash option
 
 
 [DESCRIPTION]

@@ -2,14 +2,17 @@
 #
 use strict ;
 
-use App::Framework ;
+use App::Framework qw/Daemon/;
 
 # VERSION
-our $VERSION = '1.002' ;
+our $VERSION = '1.000' ;
 
 
 	# Create application and run it
-	App::Framework->new()->go() ;
+	App::Framework->new(
+		'user' => 'sdprice1',
+		'group' => 'users',
+	)->go() ;
 
 #=================================================================================
 # SUBROUTINES EXECUTED BY APP
@@ -22,24 +25,35 @@ sub run
 {
 	my ($app) = @_ ;
 	
-	# Get source/dest dirs
-	my ($src_dir, $backup_dir) = @{$app->arglist()};
-	
-	# options
-	my %opts = $app->options() ;
+	my %opts = $app->options ;
+	my $log = $opts{'log'} || '/tmp/tmp.log' ;
 
-	if ($opts{array})
-	{
-		$app->prt_data("Array option=", $opts{array}) ;
-	}
-	if ($opts{hash})
-	{
-		$app->prt_data("Hash option=", $opts{hash}) ;
-	}
+#$REAL_USER_ID
+#$UID
+#$<
 
+#$EFFECTIVE_USER_ID
+#$EUID
+#$>
+
+#$REAL_GROUP_ID
+#$GID
+#$(
+
+#$EFFECTIVE_GROUP_ID
+#$EGID
+#$)
+
+print "Real uid=$< gid=$(   Effective: uid=$> gid=$)\n\n" ;
 	
-	# do something useful....
-	
+	while(1)
+	{
+	open my $fh, ">>$log" or die "Unable to open log file $log : $!" ;
+	print $fh "Hello world\n" ;
+	close $fh;
+
+	sleep(5) ;
+	}
 }
 
 
@@ -61,37 +75,11 @@ __DATA__
 
 An example of using the application framework with named arguments
 
-[NAMEARGS]
-
-src_dir:id backup_dir:id
-
 [OPTIONS]
 
 -database=s	Database name [default=test]
 
 Specify the database name to use
-
--int=i		An integer
-
-Example of integer option
-
--float=f	An float
-
-Example of float option
-
--array=s@	An array
-
-Example of an array option
-
--hash=s%	A hash
-
-Example of a hash option
-
-
--log=s		Override the log [default=tmp.log]
-
-Example of replacing the default log option
-
 
 [DESCRIPTION]
 

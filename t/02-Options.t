@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #
 use strict ;
-use Test::More tests => 12;
+use Test::More;
 
 use App::Framework ;
 
@@ -18,19 +18,23 @@ my $VERBOSE=0;
 
 	## run time options
 	my %expected_options = (
-		'name=s'		=> 'a name',
-		'default=s'		=> 'a default',
-		'default2=s'	=> 'b default',
-		'default3=s'	=> 'c default',
-		'override=s'	=> 'new setting',
-		'nomacro'		=> 1,
+		'name=s'			=> 'a name',
+		'default=s'			=> 'a default',
+		'default2=s'		=> 'b default',
+		'default3=s'		=> 'c default',
+		'log=s'				=> 'new setting',
+		'nomacro'			=> 1,
+		'dbg-namestuff=s'	=> 'a name',
+		'dbg-name'			=> 1,
 	) ;
 
+	plan tests => 2*scalar(keys %expected_options) ;
+	
 	foreach my $opt (keys %expected_options)
 	{
 		if ($opt !~ /^default/)
 		{
-			if ($opt =~ /(\w+)=/)
+			if ($opt =~ /([\w\-]+)=/)
 			{
 				push @ARGV, "-$1" ;
 				push @ARGV, $expected_options{$opt} ;
@@ -85,7 +89,7 @@ $app->prt_data("Options=", \%opts) ;
 	{
 		my $opt = $optkey ;
 		my $num=1 ;
-		if ($opt =~ /(\w+)=/)
+		if ($opt =~ /([\w\-]+)=/)
 		{
 			$opt = $1 ;
 			$num=0;
@@ -172,10 +176,17 @@ Tests default setting
 
 Tests default setting
 
--override=s		Override default [default=another default]
+-log=s		Override default [default=another default]
 
 Tests override of default setting
 
+-dbg-namestuff=s	Name test [default="a name"]
+
+Tests the valid name of options
+
+-dbg-name	Name test
+
+Tests the valid name of options
 
 [DESCRIPTION]
 

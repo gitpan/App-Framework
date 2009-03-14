@@ -41,7 +41,7 @@ The basic framework provides (and handles) the following pre-defined options:
 	debug			Set the debug level value
 	h|"help"		Show brief help message then exit
 	man				Show full man page then exit
-	pod				Show full man page as pod then exit
+	man-dev			Show full application developer's man page then exit
 
 Application-specific options are specified in the __DATA__ section under the heading [OPTIONS]. An example of which is:
 
@@ -174,7 +174,7 @@ By default, any arg with the f,d,e flag is assumed to be an input and doesn't ne
 is checked for existence and generates an error if it does not exist.
 
 
-=head2 Options
+=head2 Command Line Options
 
 The [OPTIONS] section is used to specify extra command line options for the application. The specification is used
 both to create the code necessary to gather the option information (and provide it to the application), but also to
@@ -197,6 +197,32 @@ The option names/values are stored in a hash retrieved as $app->options():
   
 Each option specification can optional append '=s' to the name to specify that the option expects a value (otherwise the option is treated
 as a boolean flag), and a default value may be specified enclosed in '[]'.
+
+The actual option specification is a subset of that supported by L<Getopt::Long>. The format is:
+
+	-<option>[=<option spec>]
+
+Where <option spec> is:
+
+    <type> [ <desttype> ]	
+
+<type> is the expected input type:
+	s = String. An arbitrary sequence of characters. It is valid for the argument to start with - or -- .
+	i = Integer. An optional leading plus or minus sign, followed by a sequence of digits.
+	o = Extended integer, Perl style. This can be either an optional leading plus or minus sign, followed by a sequence of digits, or an octal string (a zero, optionally followed by '0', '1', .. '7'), or a hexadecimal string (0x followed by '0' .. '9', 'a' .. 'f', case insensitive), or a binary string (0b followed by a series of '0' and '1').
+	f = Real number. For example 3.14 , -6.23E24 and so on.
+	
+<desttype> is the type of storage required (in $app->options). Default is to store in a scalar:
+   @ = store options in ARRAY ref
+   % = store options in HASH ref
+
+Also, if an option is prefixed with 'dev:' then it will only be shown in the "developer manual pages" (i.e. by using -man-dev option). For example:
+
+	-dev:pod	Output full pod
+	
+	Show full man page as pod then exit
+
+
 
 =head2 Description
 
@@ -282,12 +308,15 @@ L<App::Framework::Modules::Script>
 
 =cut
 
+# 5.6.2 fails to load in __DATA__
+use 5.008004;
+
 use strict ;
 use Carp ;
 
 use App::Framework::Base ;
 
-our $VERSION = "0.06" ;
+our $VERSION = "0.07" ;
 
 
 #============================================================================================
@@ -321,7 +350,7 @@ sub import
     my $callpkg = caller(0);
     
 #print "Framework import from $callpkg\n" ;
-    
+
     my $verbose = 0;
     my $item;
     my $file;
@@ -367,14 +396,15 @@ sub new
 	my ($obj, %args) = @_ ;
 
 	my $class = ref($obj) || $obj ;
-    my $callpkg = caller(0);
-	
+    my @callinfo = caller(0);
+
 	# Create object
 	my $this = $class->SUPER::new(
 		%args, 
+		'_caller_info'	=> \@callinfo,
 	) ;
 	$this->set(
-		'usage_fn' 	=> sub {$this->script_usage(@_);}, 
+		'usage_fn' 		=> sub {$this->script_usage(@_);}, 
 	) ;
 
 	return($this) ;

@@ -4,7 +4,7 @@ use strict ;
 use App::Framework ;
 
 # VERSION
-our $VERSION = '1.000' ;
+our $VERSION = '1.001' ;
 
 	# Create application and run it
 	App::Framework->new()->go() ;
@@ -56,6 +56,14 @@ sub run
 						'vars'	=> [qw/pid channel/],
 						'vals'	=> \%sql_vars,
 					},
+				},
+				'select_group',  {
+					'where'	=> {
+						'sql' => '`pid`>=? AND `channel`=?',
+						'vars'	=> [qw/pid channel/],
+						'vals'	=> \%sql_vars,
+					},
+					'group'	=> 'channel',
 				},
 				'delete',  {
 					'where'	=> {
@@ -145,26 +153,27 @@ sub run
 	
 	
 	
-	print "== Just stored... =================\n" ;
-	show($app, \%sql_vars, $start_pid, $start_chan) ;
-	
-	print "== All stored... ===================\n" ;
-	show($app, \%sql_vars, 0, $start_chan) ;
+	show($app, \%sql_vars, $start_pid, $start_chan, "Just stored...") ;
+	show($app, \%sql_vars, 0, $start_chan, "All stored...") ;
+	show($app, \%sql_vars, 0, $start_chan, "Grouped", 'select_group') ;
 	
 	print "Delete..\n" ;
 	$sql_vars{'pid'} = $start_pid ;
 	$app->sql_query('delete') ;
 	
-	print "== After delete... ===================\n" ;
-	show($app, \%sql_vars, 0, $start_chan) ;
+	show($app, \%sql_vars, 0, $start_chan, "After delete...") ;
 
 }
 
 #----------------------------------------------------------
 sub show
 {
-	my ($app, $sql_vars_href, $pid, $chan) = @_ ;
+	my ($app, $sql_vars_href, $pid, $chan, $title, $query_name) = @_ ;
 
+	print "== $title =================\n" ;
+
+	$query_name ||= 'select' ;
+	
 	## now get results back
 	$sql_vars_href->{'pid'} = $pid ;
 	$sql_vars_href->{'channel'} = $chan ;
@@ -172,8 +181,8 @@ sub show
 	## demo a select transaction - could have done this as:
 	# my @results = $app->sql_query_all('select');
 	#
-	$app->sql_query('select') ;
-	while (my $href = $app->sql_next('select'))
+	$app->sql_query($query_name) ;
+	while (my $href = $app->sql_next($query_name))
 	{
 		foreach my $key (sort keys %$href)
 		{
@@ -210,7 +219,7 @@ Specify the database name to use
 
 Specify a different table (note that this example will only ensure that table 'listings2' is created')
 
--user=s User [default=steve]
+-user=s User
 
 Your MySql user
 

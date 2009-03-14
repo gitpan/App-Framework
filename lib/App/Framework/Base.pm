@@ -42,7 +42,7 @@ None that I know of!
 use strict ;
 use Carp ;
 
-our $VERSION = "1.007" ;
+our $VERSION = "1.009" ;
 
 
 #============================================================================================
@@ -57,7 +57,6 @@ use File::Basename ;
 use File::Spec ;
 use File::Path ;
 use File::Copy ;
-##use Date::Manip ;
 
 use Cwd ; 
 use Pod::Usage ;
@@ -165,10 +164,11 @@ my @BASE_OPTIONS = (
 	['debug=s',			'Set debug level', 	'Set the debug level value', ],
 	['h|"help"',		'Print help', 		'Show brief help message then exit'],
 	['man',				'Full documentation', 'Show full man page then exit' ],
-	['pod',				'Output full pod', 	'Show full man page as pod then exit' ],
+	['man-dev',			'Full developer\'s documentation', 'Show full man page for the application developer then exit' ],
+	['dev:pod',				'Output full pod', 	'Show full man page as pod then exit' ],
 
-	['dbg-data',		'Debug option: Show __DATA__', 				'Show __DATA__ definition in script then exit' ],
-	['dbg-data-array',	'Debug option: Show all __DATA__ items', 	'Show all processed __DATA__ items then exit' ],
+	['dev:dbg-data',		'Debug option: Show __DATA__', 				'Show __DATA__ definition in script then exit' ],
+	['dev:dbg-data-array',	'Debug option: Show all __DATA__ items', 	'Show all processed __DATA__ items then exit' ],
 ) ;
 
 our %LOADED_MODULES ;
@@ -206,7 +206,7 @@ sub new
 
 	my $class = ref($obj) || $obj ;
 	
-	my $caller = delete $args{'_caller'} || 0 ;
+	my $caller_info_aref = delete $args{'_caller_info'} || croak "$class must be called via App::Framework" ;
 
 	# Create object
 	my $this = $class->SUPER::new(%args) ;
@@ -218,7 +218,7 @@ sub new
 #$this->debug(2);
 
 	## Get caller information
-	my ($package, $filename, $line, $subr, $has_args, $wantarray) = caller($caller) ;
+	my ($package, $filename, $line, $subr, $has_args, $wantarray) = @$caller_info_aref ;
 	$this->set(
 		'package'	=> $package,
 		'filename'	=> $filename,
@@ -643,35 +643,41 @@ sub run_cmd
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base-E<gt>pod()>
+=item C<App::Framework::Base-E<gt>pod([$developer])>
 
 Return full pod of application
+
+If the optional $developer flag is set, returns application developer biased information
 
 =cut
 
 sub pod
 {
 	my $this = shift ;
+	my ($developer) = @_ ;
 
 	my $pod = 
-		$this->pod_head() .
-		$this->pod_options() .
-		$this->pod_description() .
+		$this->pod_head($developer) .
+		$this->pod_options($developer) .
+		$this->pod_description($developer) .
 		"\n=cut\n" ;
 	return $pod ;
 }	
 	
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base-E<gt>pod_head()>
+=item C<App::Framework::Base-E<gt>pod_head([$developer])>
 
 Return pod heading of application
+
+If the optional $developer flag is set, returns application developer biased information
 
 =cut
 
 sub pod_head
 {
 	my $this = shift ;
+	my ($developer) = @_ ;
 
 	my $name = $this->name() ;
 	my $summary = $this->summary() ;
@@ -701,7 +707,23 @@ POD_HEAD
 		{
 			$default = "[Default: $option_entry_href->{'default'}]" ;
 		}
-		$pod .= sprintf "       -%-20s $option_entry_href->{summary}\t$default\n", $option_entry_href->{'pod_spec'} ;
+
+		my $multi = "" ;
+		if ($option_entry_href->{dest_type})
+		{
+			$multi = "(option may be specified multiple times)" ;
+		}
+				
+		if ($developer)
+		{
+			$pod .= sprintf "       -%-20s $option_entry_href->{summary}\t$default\n", $option_entry_href->{'spec'} ;
+		}
+		else
+		{
+			# show option if it's not a devevloper option
+			$pod .= sprintf "       -%-20s $option_entry_href->{summary}\t$default\t$multi\n", $option_entry_href->{'pod_spec'} 
+				unless $option_entry_href->{'developer'} ;
+		}
 	}
 	
 	unless (@$options_fields_aref)
@@ -714,23 +736,28 @@ POD_HEAD
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base-E<gt>pod_options()>
+=item C<App::Framework::Base-E<gt>pod_options([$developer])>
 
 Return pod of options of application
+
+If the optional $developer flag is set, returns application developer biased information
 
 =cut
 
 sub pod_options
 {
 	my $this = shift ;
+	my ($developer) = @_ ;
 
-	my $pod =<<"POD_OPTIONS" ;
+	my $pod ="\n${POD_HEAD}1 OPTIONS\n\n" ;
 
-${POD_HEAD}1 OPTIONS
+	if ($developer)
+	{
+		$pod .= "Get options from application object as:\n   my \%opts = \$app->options();\n\n" ;
+	}
 
-${POD_OVER} 8
+	$pod .= "${POD_OVER} 8\n\n" ;
 
-POD_OPTIONS
 
 	# Cycle through
 	my $options_fields_aref = $this->_option_fields() ;
@@ -742,9 +769,40 @@ POD_OPTIONS
 			$default = "[Default: $option_entry_href->{'default'}]" ;
 		}
 
-##		$pod .= "=item B<-$option_entry_href->{pod_spec}> $default\n" ;
-		$pod .= "=item -$option_entry_href->{pod_spec} $default\n" ;
-		$pod .= "\n$option_entry_href->{description}\n\n" ;
+		my $show = 1 ;
+		$show = 0  if ($option_entry_href->{'developer'} && !$developer) ;
+		if ($show)
+		{
+			if ($developer)
+			{
+				$pod .= "=item -$option_entry_href->{spec} $default # Access as \$opts{$option_entry_href->{field}} \n" ;
+			}
+			else
+			{
+				$pod .= "=item B<-$option_entry_href->{pod_spec}> $default\n" ;
+			}
+			$pod .= "\n$option_entry_href->{description}\n" ;
+			
+			if ($option_entry_href->{dest_type})
+			{
+				$pod .= "This option may be specified multiple times.\n" ;
+				
+				if ($developer)
+				{
+					my $dtype = "" ;
+					if ($option_entry_href->{dest_type} eq '@')
+					{
+						$dtype = 'ARRAY' ;
+					}
+					elsif ($option_entry_href->{dest_type} eq '%')
+					{
+						$dtype = 'HASH' ;
+					}
+					$pod .= "(The option values will be available internally via the $dtype ref \$opts{$option_entry_href->{field}})\n" ;
+				}			
+			}
+			$pod .= "\n" ;
+		}
 	}
 
 	unless (@$options_fields_aref)
@@ -759,15 +817,18 @@ POD_OPTIONS
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base-E<gt>pod_description()>
+=item C<App::Framework::Base-E<gt>pod_description([$developer])>
 
 Return pod of description of application
+
+If the optional $developer flag is set, returns application developer biased information
 
 =cut
 
 sub pod_description
 {
 	my $this = shift ;
+	my ($developer) = @_ ;
 
 	my $description = $this->description() ;
 
@@ -881,6 +942,54 @@ $this->prt_data("options() set: options spec=", $options_aref) if $this->debug()
 		# If we're setting options, then add our extra set
 		my $combined_options = [@BASE_OPTIONS, @$options_aref] ;
 		$options_aref = $combined_options ;
+
+		## process to see if any options are to be over-ridden
+		my %options ;
+		my @processed_options ;
+		foreach my $option_aref (@$options_aref)
+		{
+			my ($spec, $summary, $default_val, $description) = @$option_aref ;
+			
+			# split spec into the field names
+			my ($field, $option_spec, $pod_spec, $dest_type, $developer_only, $fields_aref, $arg_type) = $this->_process_option_spec($spec) ;
+			
+			# see if any fields have been seen before
+			my $in_list = 0 ;
+			foreach my $fnm (@$fields_aref)
+			{
+	print "opt: Checking '$fnm' ($option_aref)..\n" if $this->debug()>=2 ;
+	
+				if (exists($options{$fnm}))
+				{
+	print "opt: '$fnm' seen before\n" if $this->debug()>=2 ;
+					# seen before - overwrite settings
+					my $aref = $options{$fnm} ;
+					$in_list = 1;
+					
+					# [$spec, $summary, $description, $default_val]
+					for (my $i=1; $i < scalar(@$option_aref); $i++)
+					{
+	print "opt: checking $i\n" if $this->debug()>=2 ;
+						# if newer entry is set to something then use it
+						if ($option_aref->[$i])
+						{
+	print "opt: overwrite $i : '$aref->[$i]' with '$option_aref->[$i]'\n" if $this->debug()>=2 ;
+							$aref->[$i] = $option_aref->[$i] ;
+						}
+					}
+				}
+				else
+				{
+	print "opt: '$fnm' new $option_aref\n" if $this->debug()>=2 ;
+					# save for later checking
+					$options{$fnm} = $option_aref ;
+				}
+			}
+	print "opt: In list $in_list ($option_aref)\n" if $this->debug()>=2 ;
+	
+			push @processed_options, $option_aref unless $in_list ;
+		}
+		$options_aref = \@processed_options ;
 		
 		# Save
 		$this->_options_list($options_aref) ;
@@ -890,48 +999,13 @@ $this->prt_data("options() set: options spec=", $options_aref) if $this->debug()
 		{
 			my ($option_spec, $summary, $description, $default_val) = @$option_entry_aref ;
 			
-			# If option starts with - then remove it
-			$option_spec =~ s/^-// ;
-			
-			# Get field name
-			my $field = $option_spec ;
-			if ($option_spec =~ /[\'\"](\w+)[\'\"]/)
-			{
-				$field = $1 ;
-				$option_spec =~ s/[\'\"]//g ;
-			}
-			$field =~ s/\|.*$// ;
-			$field =~ s/\=.*$// ;
+			## Process the option spec
+			my ($field, $spec, $dest_type, $developer_only, $fields_aref, $arg_type) ;
+			($field, $option_spec, $spec, $dest_type, $developer_only, $fields_aref, $arg_type) = $this->_process_option_spec($option_spec) ;
 			
 			# Set default if required
 			$options_href->{$field} = $default_val if (defined($default_val)) ;
 			
-			# re-create spec with field name highlighted
-			my $spec = $option_spec ;
-			my $arg = "";
-			if ($spec =~ s/\=(.*)$//)
-			{
-				$arg = $1 ;
-			}
-print "options() set: pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
-
-			my @fields = split /\|/, $spec ;
-			if (@fields > 1)
-			{
-				# put field name first
-				$spec = "'$field'" ;
-				foreach my $fld (@fields)
-				{
-					next if $fld eq $field ;
-					
-	print " + $fld\n" if $this->debug()>=2 ;
-					$spec .= '|' if $spec;
-					$spec .= $fld ;
-				}	
-			}
-			$spec .= " <arg>" if $arg ;
-print "options() set: final pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
-				
 			# Add to Getopt list
 			push @$get_options_aref, $option_spec => \$options_href->{$field} ;
 			push @{$options_fields_aref}, {
@@ -941,6 +1015,9 @@ print "options() set: final pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
 					'description'=>$description,
 					'default'=>$default_val,
 					'pod_spec'=>$spec,
+					'type' => $arg_type,
+					'dest_type' => $dest_type,
+					'developer' => $developer_only,
 			} ;
 		}
 $this->prt_data("options() set: Getopts spec=", $get_options_aref) if $this->debug()>=2 ;
@@ -1067,6 +1144,11 @@ sub run
 		$this->usage($type) ;
 		$this->exit(0) ;
 	}
+	if ($opts{'man-dev'})
+	{
+		$this->usage('man-dev') ;
+		$this->exit(0) ;
+	}
 	if ($opts{'pod'})
 	{
 		print $this->pod() ;
@@ -1074,12 +1156,12 @@ sub run
 	}
 	
 	## Debug
-	if ($opts{'debug-show-data'})
+	if ($opts{'dbg-data'})
 	{
 		$this->_show_data() ;
 		$this->exit(0) ;
 	}
-	if ($opts{'debug-show-data-array'})
+	if ($opts{'dbg-data-array'})
 	{
 		$this->_show_data_array() ;
 		$this->exit(0) ;
@@ -1739,7 +1821,26 @@ print "_parse_options($data_aref)\n" if $this->debug()>=2 ;
 	my ($spec, $summary, $description, $default_val) ;
 	foreach my $line (@$data_aref)
 	{
-		if ($line =~ m/^\s*-([\'\"\w\|\=\%\@\+\{\:\,\}]+)\s+(.*?)\s*(\[default=([^\]]+)\]){0,1}\s*$/)
+		## Options specified as:
+		#
+		# -<name list>[=<opt spec>]  [\[default=<default value>\]]
+		#
+		# <name list>:
+		#    <name>|'<name>'
+		#
+		# <opt spec> (subset of that supported by Getopt::Long):
+		#    <type> [ <desttype> ]	
+		# <type>:
+		#	s = String. An arbitrary sequence of characters. It is valid for the argument to start with - or -- .
+		#	i = Integer. An optional leading plus or minus sign, followed by a sequence of digits.
+		#	o = Extended integer, Perl style. This can be either an optional leading plus or minus sign, followed by a sequence of digits, or an octal string (a zero, optionally followed by '0', '1', .. '7'), or a hexadecimal string (0x followed by '0' .. '9', 'a' .. 'f', case insensitive), or a binary string (0b followed by a series of '0' and '1').
+		#	f = Real number. For example 3.14 , -6.23E24 and so on.
+		#	
+		# <desttype>:
+		#   @ = store options in ARRAY ref
+		#   % = store options in HASH ref
+		# 
+		if ($line =~ m/^\s*-([\'\"\w\|\=\%\@\+\{\:\,\}\-\_]+)\s+(.*?)\s*(\[default=([^\]]+)\]){0,1}\s*$/)
 		{
 			# New option
 			my ($new_spec, $new_summary, $new_default, $new_default_val) = ($1, $2, $3, $4) ;
@@ -1783,6 +1884,124 @@ print "_parse_options($data_aref)\n" if $this->debug()>=2 ;
 	
 	return @options ;
 }
+
+#----------------------------------------------------------------------------
+
+=item C<App::Framework::Base-E<gt>_process_option_spec($option_spec)>
+
+Processes the option specification string, returning:
+
+	($field, $option_spec, $spec, $dest_type, $developer_only, $fields_aref, $arg_type)
+
+=cut
+
+sub _process_option_spec 
+{
+	my $this = shift ;
+	my ($option_spec) = @_ ;
+
+	my $developer_only = 0 ;
+
+	# <opt spec> (subset of that supported by Getopt::Long):
+	#    <type> [ <desttype> ]	
+	# <type>:
+	#	s = String. An arbitrary sequence of characters. It is valid for the argument to start with - or -- .
+	#	i = Integer. An optional leading plus or minus sign, followed by a sequence of digits.
+	#	o = Extended integer, Perl style. This can be either an optional leading plus or minus sign, followed by a sequence of digits, or an octal string (a zero, optionally followed by '0', '1', .. '7'), or a hexadecimal string (0x followed by '0' .. '9', 'a' .. 'f', case insensitive), or a binary string (0b followed by a series of '0' and '1').
+	#	f = Real number. For example 3.14 , -6.23E24 and so on.
+	#	
+	# <desttype>:
+	#   @ = store options in ARRAY ref
+	#   % = store options in HASH ref
+		
+	# If option starts with - then remove it
+	$option_spec =~ s/^-// ;
+	
+	# if starts with dev: then remove and flag
+	if ($option_spec =~ s/^dev://i)
+	{
+		$developer_only = 1 ;
+	}
+	
+	# Get field name
+	my $field = $option_spec ;
+	if ($option_spec =~ /[\'\"](\w+)[\'\"]/)
+	{
+		$field = $1 ;
+		$option_spec =~ s/[\'\"]//g ;
+	}
+	$field =~ s/\|.*$// ;
+	$field =~ s/\=.*$// ;
+	
+	# re-create spec with field name highlighted
+	my $spec = $option_spec ;
+	my $arg = "";
+	if ($spec =~ s/\=(.*)$//)
+	{
+		$arg = $1 ;
+	}
+print "options() set: pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
+
+	my @fields = split /\|/, $spec ;
+	if (@fields > 1)
+	{
+		# put field name first
+		$spec = "$field" ;
+		foreach my $fld (@fields)
+		{
+			next if $fld eq $field ;
+			
+	print " + $fld\n" if $this->debug()>=2 ;
+			$spec .= '|' if $spec;
+			$spec .= $fld ;
+		}	
+	}
+	
+	my $dest_type = "" ;
+	if ($arg =~ /([\@\%])/i)
+	{
+		$dest_type = $1 ;
+	}			
+
+	my $arg_type = "" ;
+	if ($arg =~ /([siof])/i)
+	{
+		$arg_type = $1 ;
+		if ($arg_type eq 's')
+		{
+			if ($dest_type eq '%')
+			{
+				$spec .= " <key=value>" ;
+			}
+			else
+			{
+				$spec .= " <string>" ;
+			}
+		}
+		elsif ($arg_type eq 'i')
+		{
+			$spec .= " <integer>" ;
+		}
+		elsif ($arg_type eq 'f')
+		{
+			$spec .= " <float>" ;
+		}
+		elsif ($arg_type eq 'o')
+		{
+			$spec .= " <extended int>" ;
+		}
+		else
+		{
+			$spec .= " <arg>"
+		}
+	}
+
+print "options() set: final pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
+				
+	return ($field, $option_spec, $spec, $dest_type, $developer_only, \@fields, $arg_type) ;
+			
+}
+
 
 #----------------------------------------------------------------------------
 

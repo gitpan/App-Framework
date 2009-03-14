@@ -1,17 +1,17 @@
-package App::Framework::Modules::Filter ;
+package App::Framework::Modules::Daemon ;
 
 =head1 NAME
 
-App::Framework::Filter - Script filter application object
+App::Framework::Daemon - Daemonize an application
 
 =head1 SYNOPSIS
 
-use App::Framework::Filter ;
+use App::Framework qw/Daemon/ ;
 
 
 =head1 DESCRIPTION
 
-Application that filters either a file or a directory to produce some other output
+App::Framework personality that provides a daemonized program (using Net::Server::Daemonize)
 
 =head1 DIAGNOSTICS
 
@@ -61,13 +61,22 @@ my @SCRIPT_OPTIONS = (
 #	['dryrun|"norun"',	'Dry run', 			'Do not execute anything that would alter the file system, just show the commands that would have executed'],
 ) ;
 
+
+my %FIELDS = (
+	## Object Data
+	'app_run'	=> undef,
+	'user'		=> 'nobody',
+	'group'		=> 'nobody',
+	'pid'		=> undef,
+) ;
+
 #============================================================================================
 # CONSTRUCTOR 
 #============================================================================================
 
-=item C<App::Framework::Filter-E<gt>new([%args])>
+=item C<App::Framework::Daemon-E<gt>new([%args])>
 
-Create a new App::Framework::Filter.
+Create a new App::Framework::Daemon.
 
 The %args are specified as they would be in the B<set> method, for example:
 
@@ -85,10 +94,21 @@ sub new
 
 	my $class = ref($obj) || $obj ;
 
+	## Need Net::Server::Daemonize
+	eval "use Net::Server::Daemonize;" ;
+	if (@$)
+	{
+		croak "Sorry. You need to have Net::Server::Daemonize installed to be able to use $class" ;
+	}
+
 	# Create object
 	my $this = $class->SUPER::new(
 		%args, 
 	) ;
+	
+	## hi-jack the run function
+	$this->app_run($this->run_fn) ;
+	$this->run_fn(sub {$this->daemon_run(@_);}) ;
 
 	return($this) ;
 }
@@ -96,17 +116,54 @@ sub new
 
 
 #============================================================================================
-# CLASS METHODS 
+
+=back
+
+=head2 CLASS METHODS
+
+=over 4
+
+=cut
+
 #============================================================================================
+
+#-----------------------------------------------------------------------------
+
+=item C<App::Server-E<gt>init_class([%args])>
+
+Initialises the object class variables.
+
+=cut
+
+sub init_class
+{
+	my $class = shift ;
+	my (%args) = @_ ;
+
+	# Add extra fields
+	$class->add_fields(\%FIELDS, \%args) ;
+
+	# init class
+	$class->SUPER::init_class(%args) ;
+
+}
 
 
 #============================================================================================
-# OBJECT METHODS 
+
+=back
+
+=head2 OBJECT METHODS
+
+=over 4
+
+=cut
+
 #============================================================================================
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base-E<gt>options([$options_aref])>
+=item C<App::Framework::Modules::Daemon-E<gt>options([$options_aref])>
 
 Adds some extra script-related default options.
 
@@ -147,6 +204,71 @@ sub options
 	}
 
 	return %$options_href ;
+}
+
+#----------------------------------------------------------------------------
+
+=item C<<App::Framework::Modules::Daemon->daemon_run()>>
+
+Daemonize then run the application's run subroutine in side a loop.
+ 
+=cut
+
+
+sub daemon_run
+{
+	my $this = shift ;
+
+
+my $use_net=1;
+if ($use_net)
+{	
+print "Calling daemonize()...\n" ;
+	## Daemonize
+	Net::Server::Daemonize::daemonize(
+	    $this->user,             # User
+	    $this->group,            # Group
+	    $this->pid,				 # Path to PID file - optional
+	);
+print "Calling application run...\n" ;
+	
+	## call application run
+	my $app_run = $this->app_run() ;
+	&$app_run($this) ;
+
+}
+else
+{
+  ##my $pid = safe_fork();
+print "Calling fork()...\n" ;
+  my $pid = fork;
+  unless( defined $pid ){
+    die "Couldn't fork: [$!]\n";
+  }
+
+
+  ### parent process should do the pid file and exit
+  if( $pid ){
+
+print "Killing parent..\n" ;
+    $pid && exit(0);
+
+
+  ### child process will continue on
+  }else{
+
+	
+print "Calling application run...\n" ;
+	
+	## call application run
+	my $app_run = $this->app_run() ;
+	&$app_run($this) ;
+
+  }
+}
+
+
+
 }
 
 

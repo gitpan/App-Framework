@@ -38,7 +38,7 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "2.010" ;
+our $VERSION = "2.012" ;
 
 #============================================================================================
 # USES
@@ -46,7 +46,7 @@ our $VERSION = "2.010" ;
 use App::Framework::Base::Object::Logged ;
 
 ## Get Sql modules - don't allow object creation without these
-our $SQL = 0 ;
+our $SQL ;
 BEGIN
 {
 	my $ok = 1 ;
@@ -73,6 +73,7 @@ our @ISA = qw(App::Framework::Base::Object::Logged) ;
 
 =head2 Fields
 
+	'host'		=> MySql host [default=localhost]
 	'database'	=> Database name (required)
 	'table'		=> Table name
 	'user'		=> User name (required)
@@ -97,6 +98,7 @@ our @ISA = qw(App::Framework::Base::Object::Logged) ;
 my %FIELDS = (
 	# Object Data
 	'dbh'			=> undef,
+	'host'			=> 'localhost',
 	'database'		=> undef,
 	'table'			=> undef,
 	'user'			=> undef,
@@ -105,13 +107,6 @@ my %FIELDS = (
 	'trace_file'	=> undef,
 	
 	'prepare'		=> undef,		# Special 'parameter' used to create STHs 
-	
-#	'_result'		=> undef,		# = current sth
-#	'_error'		=> undef,		# Not used
-#	'_record'		=> undef,		# = ($sth->fetchrow_hashref() || 0) set in next()
-
-#	'_num_rows'		=> undef,		# Not used
-#	'_data'			=> {},			# Not used
 	
 	'_sth'			=> {},
 ) ;
@@ -271,12 +266,12 @@ my %CMD_SQL = (
 	## Specific SQL commands
 	'select'	=> {
 			'prefix'	=> 'SELECT $sqlvar_select_varlist FROM `$sqlvar_table`',
-			'format'	=> 'SELECT $sqlvar_select_varlist FROM `$sqlvar_table` $sqlvar_where $sqlvar_order $sqlvar_limit',
+			'format'	=> 'SELECT $sqlvar_select_varlist FROM `$sqlvar_table` $sqlvar_where $sqlvar_group $sqlvar_order $sqlvar_limit',
 			'vals'		=> '@sqlvar_select_vals,@sqlvar_where_vals,@sqlvar_order_vals',
 	},
 	'delete'		=> {
 			'prefix'	=> 'DELETE FROM `$sqlvar_table`',
-			'format'	=> 'DELETE FROM `$sqlvar_table` $sqlvar_where $sqlvar_order $sqlvar_limit',
+			'format'	=> 'DELETE FROM `$sqlvar_table` $sqlvar_where $sqlvar_group $sqlvar_order $sqlvar_limit',
 			'vals'		=> '@sqlvar_where_vals,@sqlvar_order_vals',
 	},
 	'insert'			=> {
@@ -304,6 +299,11 @@ my %CMD_SQL = (
 	'order'			=> {
 			'prefix'	=> 'ORDER BY',
 			'format'	=> 'ORDER BY $sqlvar_order_varlist $sqlvar_asc',
+	},
+
+	'group'			=> {
+			'prefix'	=> 'GROUP BY',
+			'format'	=> 'GROUP BY $sqlvar_group_varlist $sqlvar_asc',
 	},
 
 	'limit'			=> {
@@ -537,7 +537,8 @@ sub connect
 		$this->disconnect() ;
 		
 		# Connect
-		$dbh = DBI->connect("DBI:mysql:database=".$this->database().";host=localhost",
+		$dbh = DBI->connect("DBI:mysql:database=".$this->database().
+					";host=".$this->host(),
 					$this->user(), $this->password(),
 					{'RaiseError' => 1}) or die $DBI::errstr ;
 		$this->dbh($dbh) ;
@@ -1420,6 +1421,9 @@ $this->prt_data("vars", \$vars_href) if $this->debug()>=2 ;
 	{
 		# skip non SCALAR
 		next if ref($vars_href->{$var}) ;
+		
+		# skip if empty
+		next unless $vars_href->{$var} ;
 
 print " + $var\n" if $this->debug()>=2 ;
 		
@@ -1508,38 +1512,40 @@ print "_sql_expand_array($array)\n" if $this->debug()>=2 ;
 	# skip if already an array
 	unless (ref($vars_href->{$array}) eq 'ARRAY')
 	{
-		# split on commas
-		my @arr_list = split(/[,\s+]/, $vars_href->{$array}) ;
-		
-		# start array off
-		$vars_href->{$array} = [] ;
-
-print " -- setting array\n" if $this->debug()>=2 ;
-
-		# process them
-		foreach my $arr (@arr_list)
+		if ($vars_href->{$array})
 		{
-print " -- -- get $arr\n" if $this->debug()>=2 ;
-
-			# if reference to another array, evaluate it
-			if ($arr =~ /^\@/)
+			# split on commas
+			my @arr_list = split(/[,\s+]/, $vars_href->{$array}) ;
+			
+			# start array off
+			$vars_href->{$array} = [] ;
+	
+	print " -- setting array\n" if $this->debug()>=2 ;
+	
+			# process them
+			foreach my $arr (@arr_list)
 			{
-print " -- -- -- expand $arr\n" if $this->debug()>=2 ;
-				my $arr_aref = $this->_sql_expand_array($arr, $vars_href) ;
-				
-print " -- -- -- push array $arr=$arr_aref\n" if $this->debug()>=2 ;
-
-				# Add to list
-				push @{$vars_href->{$array}}, @$arr_aref ;
+	print " -- -- get $arr\n" if $this->debug()>=2 ;
+	
+				# if reference to another array, evaluate it
+				if ($arr =~ /^\@/)
+				{
+	print " -- -- -- expand $arr\n" if $this->debug()>=2 ;
+					my $arr_aref = $this->_sql_expand_array($arr, $vars_href) ;
+					
+	print " -- -- -- push array $arr=$arr_aref\n" if $this->debug()>=2 ;
+	
+					# Add to list
+					push @{$vars_href->{$array}}, @$arr_aref if $arr_aref ;
+				}
+				else
+				{
+	print " -- -- -- push value $arr\n" if $this->debug()>=2 ;
+					# Add to list
+					push @{$vars_href->{$array}}, $arr ;
+				}			
 			}
-			else
-			{
-print " -- -- -- push value $arr\n" if $this->debug()>=2 ;
-				# Add to list
-				push @{$vars_href->{$array}}, $arr ;
-			}			
 		}
-		
 	}
 
 $this->prt_data("ARRAY $array=", $vars_href->{$array}) if $this->debug()>=2 ;
