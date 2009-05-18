@@ -18,12 +18,12 @@ our $VERSION = '1.002' ;
 #----------------------------------------------------------------------
 # Main execution
 #
-sub run
+sub app
 {
 	my ($app) = @_ ;
 	
 	# Get source/dest dirs
-	my ($src_dir, $backup_dir) = @{$app->arglist()};
+	my ($src_dir, $backup_dir) = $app->args();
 	
 	# options
 	my %opts = $app->options() ;
@@ -61,9 +61,11 @@ __DATA__
 
 An example of using the application framework with named arguments
 
-[NAMEARGS]
+[ARGS]
 
-src_dir:id backup_dir:id
+* src_dir=d 		Source directory
+
+* backup_dir=d		Backup directory
 
 [OPTIONS]
 

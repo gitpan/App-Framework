@@ -1,8 +1,9 @@
 App-Framework
 
-A framework for making script development simpler....
+A framework for making script development simpler. The framework does all of the common jobs for you, you just concentrate
+of writing the application itself.
 
-(Proper documentation to follow)
+Also provides various useful utility functions via the 'Feature' modules.
 
 
 INSTALLATION
@@ -19,7 +20,7 @@ EXAMPLES
 The example scripts in examples/ show the expected use of App::Framework
 
 	examples/eg1.pl	- Shows how to set up named arguments and the general structure of an application
-	examples/eg2.pl	- Shows how to use options and how to drive the Sql API
+	examples/eg2.pl	- Shows how to use options and how to drive the Config feature
 	
 
 SUPPORT AND DOCUMENTATION

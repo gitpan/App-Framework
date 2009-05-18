@@ -46,15 +46,24 @@ use App::Framework::Base::Object::DumpObj ;
 #============================================================================================
 # GLOBALS
 #============================================================================================
-my $debug = 0 ;
-my $verbose = 0 ;
+my $global_debug = 0 ;
+my $global_verbose = 0 ;
 my $strict_fields = 0 ;
 
 my @SPECIAL_FIELDS = qw/
-	debug
-	verbose
+	global_debug
+	global_verbose
 	strict_fields
 / ;
+
+my %COMMON_FIELDS = (
+	'debug'			=> undef,		# pseudo field
+	'verbose'		=> undef,		# pseudo field
+	'debug_level'	=> 0,
+	'verbose_level'	=> 0,
+	'debug_pkg'		=> '',
+	'verbose_pkg'	=> '',
+) ;
 
 # Constant
 #my @REQ_LIST ;
@@ -68,7 +77,7 @@ my %CLASS_INSTANCE ;
 # CONSTRUCTOR 
 #============================================================================================
 
-=item C<App::Framework::Base::Object-E<gt>new([%args])>
+=item C<new([%args])>
 
 Create a new object.
 
@@ -101,8 +110,8 @@ sub new
 
 	my $class = $obj->class() ;
 
-	print "== Object: Creating new $class object ========\n" if $debug ; 
-	prt_data("ARGS=", \%args, "\n") if $debug>=2 ;
+	print "== Object: Creating new $class object ========\n" if $global_debug ; 
+	prt_data("ARGS=", \%args, "\n") if $global_debug>=2 ;
 
 	# Initialise class variables
 	$class->init_class(%args);
@@ -123,14 +132,14 @@ sub new
 #		} unless defined($this->{$_}) ;
 #	}
 
-	prt_data("== Created object=", $this, "================================================\n") if $debug ;
+	prt_data("== Created object=", $this, "================================================\n") if $global_debug ;
 	
 	return($this) ;
 }
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>init([%args])>
+=item C<init([%args])>
 
 Initialises the newly created object instance.
 
@@ -142,7 +151,7 @@ sub init
 	my $this = shift ;
 	my (%args) = @_ ;
 
-	prt_data("init() ARGS=", \%args, "\n") if $debug>=3 ;
+	prt_data("init() ARGS=", \%args, "\n") if $global_debug>=3 ;
 
 	my $class = $this->class() ;
     $this = $this->check_instance() ;
@@ -188,13 +197,13 @@ sub init
 	## Set fields from parameters
 	$this->set(%args) ;
 
-	print "init() - done\n" if $debug>=3 ;
+	print "init() - done\n" if $global_debug>=3 ;
 
 }
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>init_class([%args])>
+=item C<init_class([%args])>
 
 Initialises the object class variables.
 
@@ -208,7 +217,7 @@ sub init_class
 
 	my $class = $this->class() ;
 
-	prt_data("init_class() ARGS=", \%args, "\n") if $debug>=3 ;
+	prt_data("init_class() ARGS=", \%args, "\n") if $global_debug>=3 ;
 #prt_data("init_class() ARGS (LIST)=", \@_, "\n") ;
 
 	if (!$CLASS_INIT{$class})
@@ -217,43 +226,56 @@ sub init_class
 		$FIELD_LIST{$class} = {};
 		my $fields = delete($args{'fields'}) ;
 
-	prt_data(" + fields=$fields", $fields, "ARGS=", \%args, "\n") if $debug>=4 ;
+	prt_data(" + fields=$fields", $fields, "ARGS=", \%args, "\n") if $global_debug>=4 ;
 #prt_data(" init_class($class) FIELDS=", $fields, "\n") ;
 
 		if ($fields)
 		{
-print " + fields=$fields ref()=", ref($fields), "\n" if $debug>=4 ;
+print " + fields=$fields ref()=", ref($fields), "\n" if $global_debug>=4 ;
 
+			my $class_fields_href = {} ;
+			
 			## Do the fields
 			if (ref($fields) eq 'ARRAY')
 			{
-				$FIELD_LIST{$class} = {map {$_ => undef} @$fields} ;
+				$class_fields_href = {
+					(%COMMON_FIELDS),
+					map {$_ => undef} @$fields
+				} ;
 			}
 			elsif (ref($fields) eq 'HASH')
 			{
-				$FIELD_LIST{$class} = {(%$fields)} ;
+				$class_fields_href = {
+					(%COMMON_FIELDS),
+					(%$fields)
+				} ;
 			}
 			else
 			{
-				$FIELD_LIST{$class} = {($fields => undef)} ;
+				$class_fields_href = {
+					(%COMMON_FIELDS),
+					($fields => undef)
+				} ;
 			}
+			
+			$FIELD_LIST{$class} = $class_fields_href ;
 		}
 
 
 		## Create private fields
 		
-prt_data(" init_class: class=$class FIELD_LIST=", \%FIELD_LIST) if $debug>=4 ;
+prt_data(" init_class: class=$class FIELD_LIST=", \%FIELD_LIST) if $global_debug>=4 ;
 
 		# Finished
 		$CLASS_INIT{$class}=1;
 	}
 
-	print "init_class() - done\n" if $debug>=3 ;
+	print "init_class() - done\n" if $global_debug>=3 ;
 }
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>add_fields($fields_href, $args_href)>
+=item C<add_fields($fields_href, $args_href)>
 
 Adds the contents of the HASH ref $fields_href to the args HASH ref ($args_href) under the key
 'fields'. Used by derived objects to add their fields to the parent object's fields.
@@ -276,9 +298,9 @@ sub add_fields
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>init_class_instance([%args])>
+=item C<init_class_instance([%args])>
 
-Initialises the Run object class variables. Creates a class instance so that these
+Initialises the object class variables. Creates a class instance so that these
 methods can also be called via the class (don't need a specific instance)
 
 =cut
@@ -297,8 +319,14 @@ sub init_class_instance
 	$class->set(%args) ;
 }
 
+#----------------------------------------------------------------------------
+# Return fields hash
+sub _field_list
+{
+	my $class = shift ;
 
-
+	return %FIELD_LIST ;
+}
 
 #============================================================================================
 # CLASS METHODS 
@@ -306,9 +334,9 @@ sub init_class_instance
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>debug(level)>
+=item C<global_debug(level)>
 
-Set debug print options to I<level>. 
+Set global debug print options to I<level>. 
 
 	0 = No debug
 	1 = standard debug information
@@ -316,15 +344,15 @@ Set debug print options to I<level>.
 
 =cut
 
-sub debug
+sub global_debug
 {
 	my $this = shift ;
 	my ($flag) = @_ ;
 
 	my $class = $this->class() ;
 
-	my $old = $debug ;
-	$debug = $flag if defined($flag) ;
+	my $old = $global_debug ;
+	$global_debug = $flag if defined($flag) ;
 
 	return $old ;
 }
@@ -332,9 +360,9 @@ sub debug
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>verbose(level)>
+=item C<global_verbose(level)>
 
-Set verbose print level to I<level>. 
+Set global verbose print level to I<level>. 
 
 	0 = None verbose
 	1 = verbose information
@@ -343,22 +371,22 @@ Set verbose print level to I<level>.
 
 =cut
 
-sub verbose
+sub global_verbose
 {
 	my $this = shift ;
 	my ($flag) = @_ ;
 
 	my $class = $this->class() ;
 
-	my $old = $verbose ;
-	$verbose = $flag if defined($flag) ;
+	my $old = $global_verbose ;
+	$global_verbose = $flag if defined($flag) ;
 
 	return $old ;
 }
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>strict_fields($flag)>
+=item C<strict_fields($flag)>
 
 Enable/disable strict field checking
 
@@ -379,7 +407,7 @@ sub strict_fields
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>class_instance([%args])>
+=item C<class_instance([%args])>
 
 Returns an object that can be used for class-based calls - object contains
 all the usual fields
@@ -397,7 +425,7 @@ sub class_instance
 	{
 		$CLASS_INSTANCE{$class} = 1 ; # ensure we don't get here again (breaks recursive loop)
 
-		print "-- Create class instance --\n" if $debug>=3 ;
+		print "-- Create class instance --\n" if $global_debug>=3 ;
 		
 		# Need to create one using the args
 		$CLASS_INSTANCE{$class} = $class->new(@args) ;
@@ -409,7 +437,7 @@ sub class_instance
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>has_class_instance()>
+=item C<has_class_instance()>
 
 Returns true if this class has a class instance object
  
@@ -420,14 +448,14 @@ sub has_class_instance
 	my $this = shift ;
 	my $class = $this->class() ;
 
-#prt_data("has_class_instance($class) CLASS_INSTANCE=", \%CLASS_INSTANCE) if $debug>=5 ;
+#prt_data("has_class_instance($class) CLASS_INSTANCE=", \%CLASS_INSTANCE) if $global_debug>=5 ;
 
 	return exists($CLASS_INSTANCE{$class}) ;
 }
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>allowed_class_instance()>
+=item C<allowed_class_instance()>
 
 Returns true if this class can have a class instance object
  
@@ -440,7 +468,7 @@ sub allowed_class_instance
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>field_list()>
+=item C<field_list()>
 
 Returns hash of object's field definitions.
 
@@ -465,7 +493,84 @@ sub field_list
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>set(%args)>
+=item C<debug(level)>
+
+Set debug print options to I<level>. 
+
+
+=cut
+
+sub debug
+{
+	my $this = shift ;
+	my ($level) = @_ ;
+
+	my $class = $this->class() ;
+
+#print "debug($level) class=$class\n" ;
+
+	if (defined $level)
+	{
+		# set level and class that it was set for
+		$this->debug_level($level) ;
+		$this->debug_pkg($class) ;
+#print " + set debug=$level pkg=$class\n" ;
+	}
+	
+	# get level and class set at
+	my $debug_level = $this->debug_level() ;
+	my $debug_pkg = $this->debug_pkg() || '' ;
+#print " + get debug=$debug_level pkg=$debug_pkg\n" ;
+
+	# if class read at is not class set at, then don't debug
+	$debug_level = 0 unless $class eq $debug_pkg ;
+#print " + ret debug=$debug_level (pkg=$debug_pkg class=$class)\n" ;
+	
+	return $debug_level ;
+}
+
+
+#----------------------------------------------------------------------------
+
+=item C<verbose(level)>
+
+Set verbose print level to I<level>. 
+
+	0 = None verbose
+	1 = verbose information
+	2 = print commands
+	3 = print command results
+
+=cut
+
+sub verbose
+{
+	my $this = shift ;
+	my ($level) = @_ ;
+
+	my $class = $this->class() ;
+
+	if (defined $level)
+	{
+		# set level and class that it was set for
+		$this->verbose_level($level) ;
+		$this->verbose_pkg($class) ;
+	}
+	
+	# get level and class set at
+	my $verbose_level = $this->verbose_level() ;
+	my $verbose_pkg = $this->verbose_pkg() ;
+
+	# if class read at is not class set at, then don't verbose
+	$verbose_level = 0 unless $class eq $verbose_pkg ;
+	
+	return $verbose_level ;
+}
+
+
+#----------------------------------------------------------------------------
+
+=item C<set(%args)>
 
 Set one or more settable parameter.
 
@@ -483,7 +588,7 @@ sub set
 	my $this = shift ;
 	my (%args) = @_ ;
 
-	prt_data("set() ARGS=", \%args, "\n") if $debug>=3 ;
+	prt_data("set() ARGS=", \%args, "\n") if $global_debug>=3 ;
 
     $this = $this->check_instance() ;
 	my $class = $this->class() ;
@@ -494,7 +599,7 @@ sub set
 	{
 		if (exists($args{$field})) 
 		{
-			print " + set $field = $args{$field}\n" if $debug>=3 ;
+			print " + set $field = $args{$field}\n" if $global_debug>=3 ;
 
 
 			# Need to call actual method (rather than ___set) so that it can be overridden
@@ -525,13 +630,13 @@ sub set
 		}
 	}
 	
-	print "set() - done\n" if $debug>=3 ;
+	print "set() - done\n" if $global_debug>=3 ;
 
 }
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>vars([@names])>
+=item C<vars([@names])>
 
 Returns hash of object's fields (i.e. field name => field value pairs).
 
@@ -581,7 +686,7 @@ sub vars
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>DESTROY()>
+=item C<DESTROY()>
 
 Destroy object
 
@@ -600,7 +705,7 @@ sub DESTROY
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>check_instance()>
+=item C<check_instance()>
 
 If this is not an instance (i.e. a class call), then if there is a class_instance
 defined use it, otherwise error.
@@ -632,7 +737,7 @@ sub check_instance
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>copy_attributes($target)>
+=item C<copy_attributes($target)>
 
 Transfers all the supported attributes from $this object to $target object.
 
@@ -664,7 +769,7 @@ sub copy_attributes
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>class()>
+=item C<class()>
 
 Returns name of object class.
 
@@ -681,7 +786,7 @@ sub class
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>clone()>
+=item C<clone()>
 
 Create a copy of this object and return the copy.
 
@@ -708,7 +813,7 @@ sub clone
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>quote_str($str)>
+=item C<quote_str($str)>
 
 Returns a quoted version of the string.
  
@@ -737,9 +842,9 @@ sub quote_str
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>expand_vars($string, \%vars)>
+=item C<expand_vars($string, \%vars)>
 
-Run through string expanding any variables, replacing them with the value stored in the %vars hash.
+Work through string expanding any variables, replacing them with the value stored in the %vars hash.
 If variable is not stored in %vars, then that variable is left.
 
 Returns expanded string.
@@ -774,7 +879,7 @@ sub expand_vars
 
 #---------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>prt_data(@args)>
+=item C<prt_data(@args)>
 
 Use App::Framework::Base::Object::DumpObj to print out variable information. Automatically enables
 object print out
@@ -790,10 +895,39 @@ sub prt_data
 	App::Framework::Base::Object::DumpObj::prt_data(@args) ;
 }
 
+#----------------------------------------------------------------------------
+#
+#=item C<_dbg_prt($items_aref [, $min_debug])>
+#
+#Print out the items in the $items_aref ARRAY ref iff the calling object's debug level is >0. 
+#If $min_debug is specified, will only print out items if the calling object's debug level is >= $min_debug.
+#
+#=cut
+#
+sub _dbg_prt
+{
+	my $obj = shift ;
+	my ($items_aref, $min_debug) = @_ ;
+
+	$min_debug ||= 1 ;
+	
+	## check debug level setting
+	if ($obj->debug >= $min_debug)
+	{
+		my $pkg = ref($obj) ;
+		$pkg =~ s/App::Framework/ApFw/ ;
+		
+		my $prefix = App::Framework::Base::Object::DumpObj::prefix("$pkg ::  ") ;
+		$obj->prt_data(@$items_aref) ;
+		App::Framework::Base::Object::DumpObj::prefix($prefix) ;
+	}
+}
+
+
 
 #---------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object-E<gt>dump_callstack()>
+=item C<dump_callstack()>
 
 Print out the call stack. Useful for debug output at a crash site. 
 =cut
@@ -836,8 +970,8 @@ sub ___set
 	my %field_list = $this->field_list() ;
 	if (!exists($field_list{$field}))
 	{
-		prt_data("$class : ___set($field) invalid field. Valid fields=", \%field_list) if $debug>=5 ;
-		$this->dump_callstack() if $debug>=10 ;
+		prt_data("$class : ___set($field) invalid field. Valid fields=", \%field_list) if $global_debug>=5 ;
+		$this->dump_callstack() if $global_debug>=10 ;
 
 		# TODO: Do something more useful!
 		croak "$class: Attempting to write invalid field $field" ;
@@ -850,7 +984,7 @@ sub ___set
 		# write
 		$this->{$field} = $new_value ;
 	}
-	print " + ___set($field) <= $new_value (was $value)\n" if $debug>=5 ;
+	print " + ___set($field) <= $new_value (was $value)\n" if $global_debug>=5 ;
 
 	# Return previous value
 	return $value ;
@@ -871,13 +1005,13 @@ sub ___get
 	my %field_list = $this->field_list() ;
 	if (!exists($field_list{$field}))
 	{
-		prt_data("$class : ___get($field) invalid field. Valid fields=", \%field_list) if $debug>=5 ;
+		prt_data("$class : ___get($field) invalid field. Valid fields=", \%field_list) if $global_debug>=5 ;
 prt_data("$class : ___get($field) invalid field. Valid fields=", \%field_list) ;
-		$this->dump_callstack() if $debug>=10 ;
+		$this->dump_callstack() if $global_debug>=10 ;
 $this->dump_callstack() ;
 
 		# TODO: Do something more useful!
-		croak "$class: Attempting to read invalid field $field" ;
+		croak "$class: Attempting to access invalid method $field (or read using invalid data accessor)" ;
 	}
 	else
 	{
@@ -885,7 +1019,7 @@ $this->dump_callstack() ;
 		$value = $this->{$field} ;
 	}
 
-	print " + ___get($field) = $value\n" if $debug>=5 ;
+	print " + ___get($field) = $value\n" if $global_debug>=5 ;
 
 	# Return previous value
 	return $value ;
@@ -900,10 +1034,10 @@ $this->dump_callstack() ;
 #
 sub AUTOLOAD 
 {
-	print "AUTOLOAD ($AUTOLOAD)\n" if $debug>=5 ;
+	print "AUTOLOAD ($AUTOLOAD)\n" if $global_debug>=5 ;
 
     my $this = shift;
-#	prt_data("AUTOLOAD ($AUTOLOAD) this=", $this) if $debug>=5 ;
+#	prt_data("AUTOLOAD ($AUTOLOAD) this=", $this) if $global_debug>=5 ;
 
 #print "$this=",ref($this),"\n";
 	if (!ref($this)||ref($this)eq'ARRAY')
@@ -912,7 +1046,7 @@ sub AUTOLOAD
 	}
 
     $this = $this->check_instance() ;
-#	prt_data(" + this=", $this) if $debug>=5 ;
+#	prt_data(" + this=", $this) if $global_debug>=5 ;
 
     my $name = $AUTOLOAD;
     $name =~ s/.*://;   # strip fully-qualified portion

@@ -1,5 +1,9 @@
 Revision history for App-Framework
 
+0.90    Mon May 18 12:30:00 2009
+		Major re-write to make the framework modular. Now has core/extensions/features
+		NOTE: Application 'run' subroutine renamed to 'app'
+
 0.07    Sat Mar 14 20:33:00 2009
         Bug fix: Corrected Sql initialisation (was claiming DBI not installed)
         Added: -man-dev option to display app developer man pages

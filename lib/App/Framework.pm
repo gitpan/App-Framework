@@ -7,228 +7,298 @@ App::Framework - A framework for creating applications
 =head1 SYNOPSIS
 
   use App::Framework ;
-  use App::Framework qw/Script/ ;
-
+  
   App::Framework->new()->go() ;
   
-  sub run
+  sub app
   {
-	my ($app) = @_ ;
+	my ($app, $opts_href, $args_href) = @_ ;
 	
 	# options
 	my %opts = $app->options() ;
-
+    
 	# aplication code here....  	
   }
 
+
 =head1 DESCRIPTION
 
-This class actually uses one of the framework sub-modules to provide it's "personality". By default that
-will be Script, but others will be available later (or if anyone adds their own). The personality is loaded
-into the framework at import time as part of the 'use':
+App::Framework is a framework for quickly developing application scripts, where the majority of the mundane script setup,
+documentation etc. jobs are performed by the framework (usually under direction from simple text definitions stored in the script).
 
-  use App::Framework qw/Script/ ;
+This leaves the developer to concentrate on the main job of implementing the application.
 
-(As stated above, if no personality is specified then 'Script' will be assumed).
+To jump straight in to developing applications, please see L<App::Framework::GetStarted>.
 
-The framework is intended to do most of the common tasks required to set up an application, being driven 
-predominantly by the applications "documentation" (see section L</DATA>).
+=head2 Capabilities
 
-=head2 COMMAND LINE OPTIONS
+The application framework provides the following capabilities: 
 
-The basic framework provides (and handles) the following pre-defined options:
+=over 2
 
-	debug			Set the debug level value
-	h|"help"		Show brief help message then exit
-	man				Show full man page then exit
-	man-dev			Show full application developer's man page then exit
+=item Options definition
 
-Application-specific options are specified in the __DATA__ section under the heading [OPTIONS]. An example of which is:
+Text definition of options in application, providing command line options, help pages, options checking. 
 
-	[OPTIONS]
-	
-	-d|'dir'=s	temp directory	[default=/tmp]
-	
-	Specify the directory in which to store the xml output files (created by dumping the rrd databases)
-	
-	-repair 	Enable rrd repair
-	
-	When this option is specified, causes the script to repair any faulty rrd files
+Also supports variables in options definition, the variables being replaced by other option values, application field values, 
+or environment variables.
 
-Here two options -d (or -dir) and -repair are defined. In this case -d is used to specify a directory name and a default
-has been declared so that, if the user does not specify the option, the default value will be used. In the application itself,
-all options are accessed via the options HASH (accessed using $app->options())
+=item Arguments definition
 
-=head2 APPLICATION FUNCTIONS
+Text definition of arguments in application, providing command line arguments, help pages, arguments checking, file/directory
+creation, file/directory existence, file opening
 
-Once the object has been created it can then be run by calling the 'go()' method. go() calls in turn:
+Also supports variables in arguments definition, the variables being replaced by other argument values, option values, application field values, 
+or environment variables.
 
-	* pre_run()		Gets & processes the options, then calls the pre_run_fn if set
-	* run()			Handles any special options (-man etc), then calls the run_fn if set
-	* post_run()	Calls post_run_fn if set
-	* exit()		Called with exit value 0 if execution reaches this far
+=item Named data sections
 
-The pre_run_fn, run_fn, and post_run_fn fields of the object can either be set directly as part of the new() call,
-or the prefered approach is to define pre_run, run, and post_run subroutines in the calling namespace. These subroutines
-are detected by App::Framework::Base and automatically set on the object.
+Multiple named __DATA__ sections, the data being readily accessible by name from the application.
 
-=head2 DATA
+Variables can be used in the data definitions, the variables being replaced by command line option values, application field values, 
+or environment variables.
 
-Similarly, the __DATA__ area of the calling namespace is the prefered area to use for object set up of common
-fields (rather than as part of the new() call). Example __DATA__ contents:
+=item Personalities
 
-	__DATA__
-	
-	[HISTORY]
-	
-	30-May-08	SDP		Re-written to use App::Framework::Script 
-	28-May-08   SDP		New
-	
-	[SUMMARY]
-	
-	List (and repair) any faulty rrd database files
-	
-	[SYNOPSIS]
-	
-	$name [options] <rrd file(s)>
-	
-	[OPTIONS]
-	
-	-d|'dir'=s	temp directory	[default=/tmp]
-	
-	Specify the directory in which to store the xml output files (created by dumping the rrd databases)
-	
-	-repair 	Enable rrd repair
-	
-	When this option is specified, causes the script to repair any faulty rrd files
-	
-	
-	[DESCRIPTION]
-	
-	Scans the specified rrd directory and lists any files which are 'faulty'. 
-	
-	Optionally this script can also repair the fault by setting the value to NaN.
-	
-	An export RRD database in XML file is of the form:
-	
- 
-This example sets the fields: history, summary, synopsis, options, and description. This information is also used to 
-automatically create the application pod, man, and usage pages.
+Single line selection of the base application type (i.e. command line script, Tk application, POE application etc). 
 
-Similarly, the $VERSION variable in the calling namespace is detected and used to set the application version number.
+Modular application framework allows for separate installation of new personalities in the installed Perl library space, or locally under
+an application-specific directory.
 
-In addition to specifying the application settings, additional named __DATA__ sections can be created. These named sections are then accessed
-via $app->data($name) to recover the text string (or an array of the text lines). Named data sections are specified as:
+=item Extensions
 
-    __DATA__ name
+Single line selection of one or more application extension plugins which modify the selected personality behaviour. 
 
-=head2 Named Arguments
+Modular application framework allows for separate installation of new extensions in the installed Perl library space, or locally under
+an application-specific directory.
 
-The [NAMEARGS] section is used to specify the expected command line arguments used with the application. These "named arguments" provide
-a mechanism for the framework to determine if all required arguments have been specified (generating an error message if not), creates
-the application documentation showing these required arguments, and allows for easier access to the arguments in the application itself.
+Example extensions (may not be installed on your system):
 
-Along with specifying the name of arguments, specification of
-certain properties of those arguments is provided for. 
+=over 4
 
-Argument properties allow you to:
- * specify if arg is optional
- * specify if arg is a file/dir
- * specify if arg is expected to exist (autocheck existence; autocreate dir if output?)
- * specify if arg is an executable (autosearch PATH so don't need to specify full path?)
- * ?flag arg as an input or output (for filters, simple in/out scripts)?
- * ?specify arg expected to be a link?
- 
-Specification is the format:
+=item Daemon
 
-   name:flags
+Selecting this extension converts the command line script into a daemon
 
-i.e. name with optional flags (indicated by a leading :)
+=item Filter
 
-Valid flags: 
-  ? arg is optional
-  f file
-  d dir
-  e exists
-  i input
-  o output
-  - dummy flag (see below)
+Sets up the application for file filtering, the framework doing most of the work in the background
 
-If names not required, can just specify flags e.g.:
+=item Find
 
-  [NAMEARGS]
-  :-
-  :- 
-  :- 
-  :?
+Sets up the application for file finding, the framework doing most of the work in the background
 
-Examples:
+=back
 
-  [NAMEARGS]
-  in:if 	# 'in' is an input file
-  out:of	# 'out' is an output file
-  dir:d 	# 'dir' is a directory
-  temp:?d 	# 'temp' is optional and a directory
+=item Features
 
-By default, any arg with the f,d,e flag is assumed to be an input and doesn't need the 'i' flag. Also, any argument marked as input
-is checked for existence and generates an error if it does not exist.
+Single line selection of one or more application feature plugins which provide application targetted functionality (for example Sql support,
+mail handling etc). 
+
+Modular application framework allows for separate installation of new features in the installed Perl library space, or locally under
+an application-specific directory.
+
+Example features (may not be installed on your system):
+
+=over 4
+
+=item Config
+
+Provides the application with configuration file support. Automatically uses the configuration file for all command line option
+settings.
+
+=item Sql
+
+Provides a simplified interface to MySQL. Provides easy set up for Sql operations delete, update, select etc.
+
+=item Mail
+
+Provides mail send support (including file attachment)
+
+=back
 
 
-=head2 Command Line Options
+=item Application directories
 
-The [OPTIONS] section is used to specify extra command line options for the application. The specification is used
-both to create the code necessary to gather the option information (and provide it to the application), but also to
-create application documentation (with the -help, -man options).
+The framework automatically adds the location of the script (following any links) to the Perl search path. This means that perl modules
+can be created in subdirectories under the application's script making the application self-contained.
 
-Each option specification is a multiline definition of the form:
+The directories used for loading personalities/extensions/features also include the script install directory, meaning that new personalities/extensions/features
+can also be provided with a script. 
 
-   -option[=s]	Option summary [default=optional default]
- 
-   Option description
- 
-The -option specification can contain multiple strings separated by '|' to provide aliases to the same option. The first specified
-string will be used as the option name. Alternatively, you may surround the preferred option name with '' quotes:
-
-  -n|'number'=s
-  
-The option names/values are stored in a hash retrieved as $app->options():
-
-  my %opts = $app->options();
-  
-Each option specification can optional append '=s' to the name to specify that the option expects a value (otherwise the option is treated
-as a boolean flag), and a default value may be specified enclosed in '[]'.
-
-The actual option specification is a subset of that supported by L<Getopt::Long>. The format is:
-
-	-<option>[=<option spec>]
-
-Where <option spec> is:
-
-    <type> [ <desttype> ]	
-
-<type> is the expected input type:
-	s = String. An arbitrary sequence of characters. It is valid for the argument to start with - or -- .
-	i = Integer. An optional leading plus or minus sign, followed by a sequence of digits.
-	o = Extended integer, Perl style. This can be either an optional leading plus or minus sign, followed by a sequence of digits, or an octal string (a zero, optionally followed by '0', '1', .. '7'), or a hexadecimal string (0x followed by '0' .. '9', 'a' .. 'f', case insensitive), or a binary string (0b followed by a series of '0' and '1').
-	f = Real number. For example 3.14 , -6.23E24 and so on.
-	
-<desttype> is the type of storage required (in $app->options). Default is to store in a scalar:
-   @ = store options in ARRAY ref
-   % = store options in HASH ref
-
-Also, if an option is prefixed with 'dev:' then it will only be shown in the "developer manual pages" (i.e. by using -man-dev option). For example:
-
-	-dev:pod	Output full pod
-	
-	Show full man page as pod then exit
+=back
 
 
+=head2 Framework Components 
 
-=head2 Description
+The diagram below shows the relationship between the application framework object (Framework) and the other components: the framework derives
 
-The description text will be reproduced when the -help or -man option is specified. Note that the variables described in L</FIELDS> will be expanded.
+    +--------------+
+    | Core         |
+    +--------------+
+          ^
+          |
+          |
+    +--------------+
+    | Personality  | Script, POE etc
+    +--------------+
+          ^
+          |
+          |
+    ................
+    : Extension(s) :..  Filter, Daemon etc
+    ................ :
+      :...............
+          ^
+          |
+          |
+    +--------------+                +--------------+
+    | Framework    |--------------->| Features     |-+ Args, Options, Pod etc
+    +--------------+                +--------------+ |
+                                      +--------------+
 
-=head2 @INC path
+
+=head3 Core and personalities
+
+An application is built by creating an App::Framework object that is derived from the application core, and also contains 0 or more feature
+objects. The application core (L<App::Framework::Core>) is not directly deriveable, you actually derive from a "personality" module that provides
+the base essentials for this selected type of application (for example 'Script' for a command line script).
+
+The personality is selected in the App::Framework 'use' command as:
+
+    use App::Framework ':<personality>'
+
+For example:
+
+    use App::Framework ':Script'
+
+Personalities add specific methods, options, arguments to the core application.
+
+All of the methods defined in the selected personality add to the core methods and are available to the application object ($app).
+
+(See L<App::Framework::CoreModules> for your currently installed personalities)
+
+
+=head3 Extensions
+
+When creating the App::Framework object, you can optionally select to derive it from one (or more) 'extensions'. An extension can modify how the 
+application routine is called, add extra command line options, and so on. For example, the 'filter' extension sets up the application
+for file filtering (calling the aplication subroutine with each line of an input file so that the file contents may be filtered).
+
+Extensions are added in the App::Framework 'use' command as:
+
+    use App::Framework '::<extension>'
+
+For example:
+
+    use App::Framework '::Daemon ::Filter'
+
+(See L<App::Framework::ExtensionModules> for your currently installed extensions)
+
+Like the personality, all of the methods defined in the selected extensions add to the core methods and are available to the application 
+object ($app).
+
+=head3 Features
+
+Features provide additional application capabilities, optional modifying what the application framework does depedning on the feature. A feature
+may also simply be an application-specific collection of useful methods.
+
+Unlike core/personality/extension, features are not part of the application object - they are kept in a "feature list" that the application can 
+access to use a feature's methods. For convenience, all features provide an accessor method (I<access>) that is aliased as an application method
+with the same name as the feature. This access method provides the most commonly used functionality for that feature. For example, the 'data'
+feature provides access to named data sections as:
+
+    my $data = $app->data('named_section') ;
+
+Alternatively, the data feature object can be retrieved and used:
+
+    my $data_feature = $app->feature('data') ;
+    my $data = $data_feature->access('named_section') ;
+
+Features are added in the App::Framework 'use' command as:
+
+    use App::Framework '+<feature>'
+
+For example:
+
+    use App::Framework '+Args +Data +Mail +Config'
+
+(See L<App::Framework::FeatureModules> for your currently installed extensions)
+
+
+=head2 Using This Module 
+
+To create an application you need to declare: the personality to use, any optional extensions, and which features you wish to use.
+
+You do all this in the 'use' pragma for the module, for example:
+
+    use App::Framework ':Script ::Filter +Mail +Config' ;
+
+By default, the 'Script' personality is assumed (and so need not be declared), and the framework ensures that all of the features it requires are always loaded (so you don't
+need to declare +Args, +Options, +Data, +Pod, +Run). So, the minimum is:
+
+    use App::Framework ;
+
+=head3 Creating Application Object
+
+There are two ways of creating an application object and running it. The normal way is:
+
+    # Create application and run it
+    App::Framework->new()->go() ;
+
+As an alternative, the framework creates a subroutine in the calling namespace called B<go()> which does the same thing:
+
+    # Create application and run it
+    go() ;
+
+You can use whatever takes your fancy. Either way, the application object will end up calling the user-defined application subroutines 
+
+
+
+=head3 Application Subroutines
+
+Once the application object has been created it can then be run by calling the 'go()' method. go() calls the application's registered functions
+in turn:
+
+=over 2
+
+=item * app_start()	
+
+Called at the start of the application. You can use this for any additional set up (usually of more use to extension developers)
+
+=item * app()
+
+Called once all of the arguments and options have been processed
+
+=item * app_end()
+
+Called when B<app()> terminates or returns (usually of more use to extension developers)
+
+=back
+
+The framework looks for these 3 functions to be defined in the script file. The functions B<app_start> and B<app_end> are optional, but it is expected that B<app> will be defined
+(otherwise nothing happens!).
+
+=head3 Setup
+
+?????? TO BE COMPLETED
+
+
+=head3 Data
+
+?????? TO BE COMPLETED
+
+
+
+=head2 Directories
+
+
+
+?????? TO BE COMPLETED
+
+
+
+=head3 @INC path
 
 App::Framework automatically pushes some extra directories at the start of the Perl include library path. This allows you to 'use' application-specific
 modules without having to install them globally on a system. The path of the executing Perl application is found by following any links until
@@ -239,25 +309,18 @@ an actually Perl file is found. The @INC array has the following added:
 	
 i.e. The directory that the Perl file resides in, and a sub-directory 'lib' will be searched for application-specific modules.
 
-=head2 Configuration
 
-App::Framework loads some settings from L<App::Framework::Config>. This may be modified on a site basis as required 
+=head2 Settings
+
+App::Framework loads some settings from L<App::Framework::Settings>. This may be modified on a site basis as required 
 (in a similar fashion to CPAN Config.pm). 
 
 
 =head2 Loaded modules
 
-App::Framework pre-loads the user namespace with some common modules. See L<App::Framework::Config> for the complete list. 
+App::Framework pre-loads the user namespace with some common modules. See L<App::Framework::Settings> for the complete list. 
 
 	
-=head2 MySql support
-
-The 'sql' field may be specified as either a HASH ref or an ARRAY ref (where each ARRAY entry is a HASH ref). The HASH ref must
-contain sufficient information to create a L<App::Framework::Base::Sql> object. 
-
-Calling to the sql() method with no parameter will return the first created L<App::Framework::Base::Sql> object. Calling the sql() method with a string will
-return the L<App::Framework::Base::Sql> object created for the named database (i.e. sql objects are named by their database). The sql object can then be
-used as defined in L<App::Framework::Base::Sql>
 
 =head2 FIELDS
 
@@ -273,9 +336,9 @@ The following fields should be defined either in the call to 'new()' or as part 
  * nameargs = Definition of the program arguments and their intended usage (see below)
  * sql = Definition of sql database connection & queries (see below)
 
- * pre_run_fn = Function called before run() function (default is application-defined 'pre_run' subroutine if available)
- * run_fn = Function called to execute program (default is application-defined 'run' subroutine if available)
- * post_run_fn = Function called after run() function (default is application-defined 'post_run' subroutine if available)
+ * app_start_fn = Function called before app() function (default is application-defined 'app_start' subroutine if available)
+ * app_fn = Function called to execute program (default is application-defined 'app' subroutine if available)
+ * app_end_fn = Function called after app() function (default is application-defined 'app_end' subroutine if available)
  * usage_fn = Function called to display usage information (default is application-defined 'usage' subroutine if available)
 
 During program execution, the following values can be accessed:
@@ -287,36 +350,21 @@ During program execution, the following values can be accessed:
  * progname = Name of the program (without path or extension)
  * progpath = Pathname to program
  * progext = Extension of program
- * runobj = L<App::Framework::Base::Run> object
  
 
 
-=head2 Further details
-
-The actual functionality (and hence most of the methods) of the class is provided by L<App::Framework::Base> which should be referred to
-for complete documentation.
-
-The personalities are described in:
-
-=over 4
-
-=item * Script
-
-L<App::Framework::Modules::Script>
-
-=back
 
 =cut
 
-# 5.6.2 fails to load in __DATA__
 use 5.008004;
 
 use strict ;
 use Carp ;
 
-use App::Framework::Base ;
+use App::Framework::Core ;
 
-our $VERSION = "0.07" ;
+
+our $VERSION = "0.90" ;
 
 
 #============================================================================================
@@ -328,8 +376,10 @@ our @ISA ;
 # GLOBALS
 #============================================================================================
 
+our $class_debug = 0 ;
+
 # Keep track of import info
-my %imports ;
+my $import_args ;
 
 
 #============================================================================================
@@ -347,33 +397,28 @@ my %imports ;
 sub import 
 {
     my $pkg     = shift;
-    my $callpkg = caller(0);
     
-#print "Framework import from $callpkg\n" ;
-
-    my $verbose = 0;
-    my $item;
-    my $file;
-
-    for $item (@_) 
-    {
-    	$imports{$callpkg} = $item ;
-    }
-
-	# Get name of requested personality
-	my $personality = ($imports{$callpkg} || 'Script' ) ;
-	my $module =  "App::Framework::Modules::$personality" ; 
-#print "require $module....\n" ;
-	eval "require $module;" ;
-	croak "Sorry, App:Framework does not support personality \"$personality\"" if $@ ;
-
-	## Create ourself as if we're an object of the required type	
-	@ISA = ( $module ) ;
-
-
+    $import_args = join ' ', @_ ;
+    
 	## Set library paths
 	my ($package, $filename, $line, $subr, $has_args, $wantarray) = caller(0) ;
-	App::Framework::Base->set_paths($filename) ;
+	App::Framework::Core->set_paths($filename) ;
+
+	## Add a couple of useful function calls into the caller namespace
+	{
+		no warnings 'redefine';
+		no strict 'refs';
+
+		foreach my $fn (qw/go modpod/)	
+		{
+			*{"${package}::$fn"} = sub {  
+			    my @callinfo = caller(0);
+				my $app = App::Framework->new(@_,
+					'_caller_info' => \@callinfo) ;
+				$app->$fn() ;
+			};
+		}	
+	}
     
 }
 
@@ -383,11 +428,19 @@ sub import
 
 Create a new object.
 
-The %args are specified as they would be in the B<set> method, for example:
+The %args passed down to the parent objects.
 
-	'adapter_num' => 0
+The parameters are specific to App::Framework:
 
-The full list of possible arguments are as described in the L</FIELDS> section
+=over 4
+
+=item B<specification> - Application definition
+
+Instead of specifying the application in the 'use App::Framework' line, you can just specify them in this
+argument when creating the object. If this is specified it will overwrite any specification in the 'use' pragma.
+
+=back
+
 
 =cut
 
@@ -396,19 +449,289 @@ sub new
 	my ($obj, %args) = @_ ;
 
 	my $class = ref($obj) || $obj ;
+
     my @callinfo = caller(0);
+	$args{'_caller_info'} ||= \@callinfo ;
+
+	print __PACKAGE__."->new() : caller=$args{'_caller_info'}->[0]\n" if $class_debug ;
+
+	if (exists($args{'specification'}))
+	{
+		$import_args = delete $args{'specification'} ;
+	}
+
+
+
+	## Process the import command args
+	my $personality ;
+	my @features ;
+	my @extensions ;
+	my %extension_args ;
+	my %feature_args ;
+	$import_args ||= ':Script +run' ;
+	
+	# Expect something of the form:
+	# :Personality ::Extension ::Ext(option1 option2) +Feature +Feat(opt1, opt2)
+	#
+	#                           type        name       args 
+	while ($import_args =~ /\s*([\:\+]{1,2})([\w_]+)\s*(?:\(([^\)]+)\)){0,1}/g)
+	{
+		my ($type, $name, $args) = ($1, $2, $3) ;
+		if ($type eq ':')
+		{
+			if ($personality)
+			{
+				croak "Sorry, App::Framework does not support multiple personalities (please see a physiciatrist!)" ;
+			}
+			if ($args)
+			{
+				warn "Sorry, personalities do not support arguments" ;
+			}
+			$personality = $name ;
+		}
+		elsif ($type eq '::')
+		{
+			push @extensions, $name ;
+			$extension_args{$name} = $args || "" ;
+		}
+		elsif ($type eq '+')
+		{
+			push @features, $name ;
+			$feature_args{$name} = $args || "" ;
+		}
+		else
+		{
+			croak "App::Framework does not understand the import string \"$import_args\" at \"$type\" " ;
+		}
+	}
+
+	## sort extension list
+	my @extension_modules ;
+	my %extensions ;
+	foreach my $extension (@extensions)
+	{
+		my $module = "App::Framework::Extension::$extension" ;
+
+		print "Extension $extension - module $module\n" if $class_debug ;
+
+		# only allow 1 instance of each extension
+		if (!exists($extensions{$module}))
+		{
+			if (App::Framework::Core->dynamic_load($module, __PACKAGE__))
+			{
+				print " + loaded\n" if $class_debug ;
+	
+				my $priority ;
+				eval "\$priority = \$${module}::PRIORITY ;" ;
+				print " + $@\n" if $@ && $class_debug ;
+				
+				$priority ||= $App::Framework::Base::PRIORITY_DEFAULT ;
+	
+				print " + priority=$priority\n" if $class_debug ;
+				push @extension_modules, [$extension, $module, $priority] ;
+			}
+			else
+			{
+				croak "App::Framework cannot load extension \"$extension\" " ;
+			}
+		}
+		$extensions{$module} = 1 ;
+	}
+	@extension_modules = sort { $a->[2] <=> $b->[2] } @extension_modules ;
+	my @modules = map { $_->[1] } @extension_modules ;
+	
+	# extensions are based from App::Framework::Extension
+	push @modules, 'App::Framework::Extension' ;
+
+	if ($class_debug)
+	{
+		print "Import: $import_args\n" ;
+		print "features: @features\n" ;
+		print "Extensions: @extensions\n" ;
+		
+		print "Extension Modules: @modules\n" ;
+	}
+
+	## load module
+	$personality ||= 'Script' ;
+	my $module =  "App::Framework::Core::$personality" ; 
+	push @modules, $module ;
+
+	print "Framework Inheritence Modules:\n\t". join("\n\t",@modules)."\n" if $class_debug ;
+
+
+	$module = shift @modules ;
+	
+	my $loaded = App::Framework::Core->dynamic_isa($module, __PACKAGE__) ;
+	croak "Sorry, App::Framework does not support \"$module\"" unless $loaded ;
 
 	# Create object
 	my $this = $class->SUPER::new(
 		%args, 
-		'_caller_info'	=> \@callinfo,
+		'_caller_info'	=> $args{'_caller_info'},
+		'_inheritence'	=> \@modules,
+		
+		## Pass down extra information
+		'personality'	=> $personality,
+		'extensions'	=> \@extensions,
 	) ;
 	$this->set(
 		'usage_fn' 		=> sub {$this->script_usage(@_);}, 
 	) ;
 
+	## Load features
+	if (@features)
+	{
+		## Install them
+		$this->install_features(\@features, \%feature_args) ;
+	}
+
+
 	return($this) ;
 }
+
+#----------------------------------------------------------------------------------------------
+
+=item C<< modpod() >>
+
+Create/update module pod files. Creates/updates the pod for the module lists: 
+L<App::Framework::FeatureModules>,L<App::Framework::ExtensionModules>,L<App::Framework::CoreModules>
+
+Used during installation.
+
+=cut
+
+sub modpod
+{
+	my $this = shift ;
+
+	foreach my $name (qw/Core Extension Feature/)
+	{
+		my $podfile = "App/Framework/${name}Modules.pod" ;
+		my %modules = App::Framework::Core->lib_glob("App/Framework/$name") ;	
+		my $template = $this->_template($name) ;
+
+		print "$podfile ...\n" ;
+				
+		my @list ;
+		foreach my $module (sort keys %modules)
+		{
+			if ( open my $fh, "<$modules{$module}" )
+			{
+				my ($summary, $version, $line) ;
+				my $modname = "App::Framework::${name}::${module}" ;
+				while ( !($summary && $version) && defined($line = <$fh>) )
+				{
+					chomp $line ;
+
+					# App::Framework::Feature::Args - Handle application command line arguments
+					if ($line =~ m/$modname\s*\-\s*(\S.*)/)
+					{
+						$summary = $1 ;
+					}
+
+					# our $VERSION = "1.000" ;
+					if ($line =~ m/(?:our|my)\s+\$VERSION\s*=\s*["']([\d\.]+)["']/)
+					{
+						$version = $1 ;
+					}
+				}
+				close $fh ;
+				
+				if ($summary)
+				{
+					print "   $modname\n" ;
+					push @list, {
+						'module' 	=> $modname,
+						'file'		=> $modules{$module},
+						'summary'	=> $summary,
+						'version'	=> $version,
+					}
+				}
+			}
+		}
+		
+		## Write file
+		my $blib_pod = "blib/lib/$podfile" ;
+		if (-f $blib_pod)
+		{
+			chmod 0755, $blib_pod ; 
+		}
+		if (open my $fh, ">$blib_pod")
+		{
+			my $list ;
+			foreach my $href (@list)
+			{
+				my $version = $href->{version} ? "v$href->{version}" : "" ;
+				$list .= "=item * L<$href->{module}>  $version\n\n" ;
+				$list .= "$href->{summary}\n\n" ;
+			}
+			$template =~ s/<LIST>/$list/m ;
+
+			print $fh $template ;
+			
+			close $fh ;
+		}
+		else
+		{
+			die "Error: unable to write pod file $blib_pod : $!" ;
+		}
+	}
+
+}
+
+
+
+#============================================================================================
+# PRIVATE
+#============================================================================================
+
+
+##----------------------------------------------------------------------------------------------
+## Create a new App::Framework object, then call the specified method
+#sub _new_and_call
+#{
+#	my $class = shift ;
+#	my ($method, %args) = @_ ;
+#	my $this = new(%args) ;
+#	$this->$method(%args) ;
+#}
+
+#----------------------------------------------------------------------------------------------
+# Returns the pod file template for this named file
+sub _template
+{
+	my $class = shift ;
+	my ($name) = @_ ;
+	my $template ;
+
+	my $eq = '=' ;
+	$template = <<TEMPLATE ;
+${eq}head1 NAME
+
+App::Framework::${name}Modules - Module list for installed ${name} modules 
+
+${eq}head1 DESCRIPTION
+
+The following list shows the ${name} modules installed on your system:
+
+${eq}over 4
+
+<LIST>
+
+${eq}back
+
+${eq}head1 AUTHOR
+
+Steve Price, C<< <sdprice at cpan.org> >>
+
+${eq}cut
+
+TEMPLATE
+
+	return $template ;
+}
+
 
 =back
 

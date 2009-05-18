@@ -1,4 +1,4 @@
-package App::Framework::Base::Sql ;
+package App::Framework::Feature::Sql ;
 
 =head1 NAME
 
@@ -6,31 +6,13 @@ Sql - MySql interface
 
 =head1 SYNOPSIS
 
-use App::Framework::Base::Sql ;
+use App::Framework::Feature::Sql ;
 
 
 =head1 DESCRIPTION
 
 Provides a simplified interface to MySQL via DBI.
  
-=head1 DIAGNOSTICS
-
-Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
-
-=head1 AUTHOR
-
-Steve Price E<lt>sdprice@sdprice.plus.comE<gt>
-
-=head1 BUGS
-
-None that I know of!
-
-NOTE: To avoid the common "Mysql server gone away" problem, everywhere that I get the database connection handle, I actually call
-the connect() method to ensure the connection is working.
-
-=head1 INTERFACE
-
-=over 4
 
 =cut
 
@@ -38,38 +20,23 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "2.012" ;
+our $VERSION = "2.014" ;
 
 #============================================================================================
 # USES
 #============================================================================================
-use App::Framework::Base::Object::Logged ;
-
-## Get Sql modules - don't allow object creation without these
-our $SQL ;
-BEGIN
-{
-	my $ok = 1 ;
-	foreach my $mod (qw/DBI Date::Manip/)
-	{
-		eval "require $mod;" ;	
-		$ok = 0 if ($@) ;	
-	}
-	$SQL = $ok ;
-}
+use App::Framework::Feature ;
 
 
 
 #============================================================================================
 # OBJECT HIERARCHY
 #============================================================================================
-our @ISA = qw(App::Framework::Base::Object::Logged) ; 
+our @ISA = qw(App::Framework::Feature) ; 
 
 #============================================================================================
 # GLOBALS
 #============================================================================================
-
-=back
 
 =head2 Fields
 
@@ -248,7 +215,6 @@ If the spec has a 'vals' entry, then these are pushed on to an ARRAY ref and sto
 @sqlvar_<context>_vals = Real ARRAY ref (provided by the spec)
 @sqlvar_<context> = String in the format "@sqlvar_select_vals,@sqlvar_where_vals" (provided by parse control hash)
 
-=over 4
 
 =cut
 
@@ -315,10 +281,16 @@ my %CMD_SQL = (
 
 
 #============================================================================================
-# CONSTRUCTOR 
+
+=head2 CONSTRUCTOR
+
+=over 4
+
+=cut
+
 #============================================================================================
 
-=item C<App::Framework::Base::Sql-E<gt>new([%args])>
+=item B<new([%args])>
 
 Create a new Sql object.
 
@@ -336,20 +308,14 @@ sub new
 {
 	my ($obj, %args) = @_ ;
 	
-	## No object creation if not got modules
-	unless ($SQL)
-	{
-		carp "Cannot create Sql object as DBI modules not installed" ;
-		return undef ;
-	}
-
 	my $class = ref($obj) || $obj ;
 
 	# Create object
-	my $this = $class->SUPER::new(%args) ;
+	my $this = $class->SUPER::new(%args,
+		'requires' => [qw/DBI DBD::mysql/],
+	) ;
 
-	# Connect
-	$this->connect() ;
+	## Postpone connection until we actually need it
 
 	return($this) ;
 }
@@ -357,12 +323,20 @@ sub new
 
 
 #============================================================================================
-# CLASS METHODS 
+
+=back
+
+=head2 CLASS METHODS
+
+=over 4
+
+=cut
+
 #============================================================================================
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Sql-E<gt>init_class([%args])>
+=item B<init_class([%args])>
 
 Initialises the Sql object class variables.
 
@@ -382,12 +356,20 @@ sub init_class
 }
 
 #============================================================================================
-# OBJECT METHODS 
+
+=back
+
+=head2 OBJECT DATA METHODS
+
+=over 4
+
+=cut
+
 #============================================================================================
 
 #----------------------------------------------------------------------------
 
-=item C<Object-E<gt>set(%args)>
+=item C<set(%args)>
 
 Set one or more settable parameter.
 
@@ -424,6 +406,18 @@ sub set
 	$this->SUPER::set(%args) if keys %args ;
 
 }
+
+#============================================================================================
+
+=back
+
+=head2 OBJECT METHODS
+
+=over 4
+
+=cut
+
+#============================================================================================
 
 
 #----------------------------------------------------------------------------
@@ -540,7 +534,7 @@ sub connect
 		$dbh = DBI->connect("DBI:mysql:database=".$this->database().
 					";host=".$this->host(),
 					$this->user(), $this->password(),
-					{'RaiseError' => 1}) or die $DBI::errstr ;
+					{'RaiseError' => 1}) or $this->throw_fatal( $DBI::errstr ) ;
 		$this->dbh($dbh) ;
 		
 		# Update trace level
@@ -918,7 +912,8 @@ sub do
 	my $this = shift ;
 	my ($sql) = @_ ;
 	
-	my $dbh = $this->dbh() ;
+	my $dbh = $this->connect() ;
+#	my $dbh = $this->dbh() ;
 
 	# Do query
 	eval
@@ -1010,7 +1005,7 @@ sub tables
 
 =item C<Sql-E<gt>datestr_to_sqldate($datestr)>
 
-Convert standard date string (d-MMM-YYYY) to SQL based date (YYYY-MM-DD)
+Convert standard date string (d-MMM-YYYY) or (d/M/YY) to SQL based date (YYYY-MM-DD)
 	
 =cut
 
@@ -1030,6 +1025,7 @@ sub datestr_to_sqldate
 	}
 	else
 	{
+		# Handle d-MMM-YYYY (already copes with d/M/YY)
 		$datestr =~ s%-%/%g ;
 		my $date = ParseDate($datestr) ;
 		$sqldate = UnixDate($date, "%Y-%m-%d") ;
@@ -1070,6 +1066,74 @@ sub sqldate_to_date
 
 	return $datestr ;
 }
+
+
+#----------------------------------------------------------------------------
+
+=item C<Sql-E<gt>sqldate_to_datemanip($sql_date)>
+
+Convert SQL based date (YYYY-MM-DD) to a date string suitable for Date::Manip (d/M/YYYY)
+	
+=cut
+
+sub sqldate_to_datemanip
+{
+	my $this = shift ;
+	my ($sqldate) = @_ ;
+
+	my $datestr ;
+
+	if ($sqldate =~ m/(\d{4})\-(\d{2})\-(\d{2})/)
+	{
+		$datestr = "$3/$2/$1" ;
+	}
+	else
+	{
+		$sqldate =~ s%-%/%g ;
+		my $date = ParseDate($sqldate) ;
+
+		$datestr = UnixDate($date, "%d/%m/%Y") ;
+		
+	}
+
+	return $datestr ;
+}
+
+
+#----------------------------------------------------------------------------
+
+=item C<App::Framework::Core-E<gt>sql_from_data($name)>
+
+NOTE: Only works when feature is registered with an application
+
+Execute the (possible sequence of) command(s) stored in a named __DATA__ area in the application.
+
+=cut
+
+sub sql_from_data
+{
+	my $this = shift ;
+	my ($name) = @_ ;
+	
+	my $app = $this->app() ;
+	$this->throw_error("Unable to find DATA section since not associated with an application") unless $app ;	
+	
+	# Get named data
+	my $sql_text = $app->data($name) ;
+	
+	if ($sql_text)
+	{
+		## process the data
+		$this->do_sql_text($sql_text) ;
+	}
+	else
+	{
+		$this->throw_error("Data section $name contains no SQL") ;	
+	}
+
+	return $this ;	
+}
+
 
 
 #    /**
@@ -1607,13 +1671,13 @@ sub _sth_record_sth
 		$sth = $sth_href->{'sth'} ;
 
 		# TODO: error
-die "Error: sth $name not created" unless $sth ;				
+$this->throw_fatal( "Error: sth $name not created" ) unless $sth ;				
 
 	}
 	else
 	{
 		# TODO: error
-die "Error: sth $name not created" ;				
+$this->throw_fatal( "Error: sth $name not created" ) ;				
 	}
 		
 	return $sth ;
@@ -1640,6 +1704,26 @@ sub _set_trace
 
 # ============================================================================================
 # END OF PACKAGE
+
+=back
+
+=head1 DIAGNOSTICS
+
+Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
+
+=head1 AUTHOR
+
+Steve Price C<< <sdprice at cpan.org> >>
+
+=head1 BUGS
+
+None that I know of!
+
+NOTE: To avoid the common "Mysql server gone away" problem, everywhere that I get the database connection handle, I actually call
+the connect() method to ensure the connection is working.
+
+=cut
+
 1;
 
 __END__

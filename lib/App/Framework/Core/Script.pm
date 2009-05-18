@@ -1,76 +1,16 @@
-package App::Framework::Modules::Script ;
+package App::Framework::Core::Script ;
 
 =head1 NAME
 
-App::Framework::Modules::Script - App::Framework command line script personality
+App::Framework::Core::Script - App::Framework command line script personality
 
 =head1 SYNOPSIS
 
-	use App::Framework ;
-	
-	# VERSION
-	our $VERSION = '1.001' ;
-
-	# Create application and run it
-	App::Framework->new()->go() ;
-
-	#----------------------------------------------------------------
-	# Define run subroutine, automatically called by App:Script->go()
-	sub run
-	{
-		my ($app) = @_ ;
-		
-		my %opts = $app->options() ;
-		my @namelist = @{$app->arglist()}; 
-	
-		# DO APPLICATION HERE
-		
-	}
-	
-	#----------------------------------------------------------------
-	# Define main script information & all application options
-	__DATA__
-	
-	[HISTORY]
-	
-	30-May-08	SDP		Re-written to use App::Framework::Script 
-	28-May-08   SDP		New
-	
-	[SUMMARY]
-	
-	List (and repair) any faulty rrd database files
-	
-	[SYNOPSIS]
-	
-	$name [options] <rrd file(s)>
-	
-	[OPTIONS]
-	
-	-d|'dir'=s	temp directory	[default=/tmp]
-	
-	Specify the directory in which to store the xml output files (created by dumping the rrd databases)
-	
-	-repair 	Enable rrd repair
-	
-	When this option is specified, causes the script to repair any faulty rrd files
-	
-	
-	[DESCRIPTION]
-	
-	Scans the specified rrd directory and lists any files which are 'faulty'. 
-	
-	Optionally this script can also repair the fault by setting the value to NaN.
-	
-	An export RRD database in XML file is of the form:
-	
-	  <!-- Round Robin Database Dump --><rrd>	<version> 0003 </version>
-		<step> 300 </step> <!-- Seconds -->
-		<lastupdate> 1211355308 </lastupdate> <!-- 2008-05-21 08:35:08 BST -->
 
 
 =head1 DESCRIPTION
 
-Derived object from App::Framework::Base. Should only be called via App::Framework import.
+Derived object from App::Framework::Core. Should only be called via App::Framework import.
 
 Adds command line script specific additions to base properties. Adds the following
 additional options:
@@ -81,37 +21,21 @@ additional options:
 	
 Defines the exit() method which just calls standard exit.
 
-Defines a usage_fn which gets called by App::Framework::Base->uage(). This function calls pod2usage to display help, man page
+Defines a usage_fn which gets called by App::Framework::Core->uage(). This function calls pod2usage to display help, man page
 etc. 
-
-=head1 DIAGNOSTICS
-
-Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
-
-=head1 AUTHOR
-
-Steve Price C<< <sdprice at cpan.org> >>
-
-=head1 BUGS
-
-None that I know of!
-
-=head1 INTERFACE
-
-=over 4
 
 =cut
 
 use strict ;
 use Carp ;
 
-our $VERSION = "1.001" ;
+our $VERSION = "1.002" ;
 
 
 #============================================================================================
 # USES
 #============================================================================================
-use App::Framework::Base ;
+use App::Framework::Core ;
 
 use File::Temp ();
 use Pod::Usage ;
@@ -121,11 +45,13 @@ use Pod::Usage ;
 #============================================================================================
 # OBJECT HIERARCHY
 #============================================================================================
-our @ISA = qw(App::Framework::Base) ; 
+our @ISA = qw(App::Framework::Core) ; 
 
 #============================================================================================
 # GLOBALS
 #============================================================================================
+
+our $class_debug = 0 ;
 
 # Set of script-related default options
 my @SCRIPT_OPTIONS = (
@@ -134,13 +60,35 @@ my @SCRIPT_OPTIONS = (
 	['dryrun|"norun"',	'Dry run', 			'Do not execute anything that would alter the file system, just show the commands that would have executed'],
 ) ;
 
-#============================================================================================
-# CONSTRUCTOR 
+
 #============================================================================================
 
-=item C<App::Framework::Modules::Script-E<gt>new([%args])>
+=head2 FIELDS
 
-Create a new App::Framework::Modules::Script.
+None
+
+=over 4
+
+=cut
+
+
+
+#============================================================================================
+
+=back
+
+=head2 CONSTRUCTOR METHODS
+
+=over 4
+
+=cut
+
+#============================================================================================
+
+
+=item B<new([%args])>
+
+Create a new App::Framework::Script.
 
 The %args are specified as they would be in the B<set> method, for example:
 
@@ -157,15 +105,21 @@ sub new
 	my ($obj, %args) = @_ ;
 
 	my $class = ref($obj) || $obj ;
+print "App::Framework::Core::Script->new() class=$class\n" if $class_debug;
 	
 	# Create object
 	my $this = $class->SUPER::new(
 		%args, 
 	) ;
 	$this->set(
-		'usage_fn' 	=> sub {$this->script_usage(@_);}, 
+		'usage_fn' 	=> sub { $this->script_usage(@_); }, 
 	) ;
 
+	## Set options
+	$this->feature('Options')->append_options(\@SCRIPT_OPTIONS) ;
+
+print "App::Framework::Core::Script->new() - END\n" if $class_debug;
+	
 	return($this) ;
 }
 
@@ -185,7 +139,7 @@ sub new
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Modules::Script-E<gt>allowed_class_instance()>
+=item B<allowed_class_instance()>
 
 Class instance object is not allowed
  
@@ -208,59 +162,11 @@ sub allowed_class_instance
 
 #============================================================================================
 
-#----------------------------------------------------------------------------
-
-=item C<App::Framework::Modules::Script-E<gt>options([$options_aref])>
-
-Adds some extra script-related default options.
-
-Set options based on the ARRAY ref specification.
-
-Each entry in the ARRAY is an ARRAY ref containing:
-
- [ <option spec>, <option summary>, <option description> ]
-
-Where the <option spec> is in the format used by Getopt::Long
-
-NOTE: The <option spec> also determines the name of the field used to store the
-option value/flag. If alternatives are specified, then the first one is used. Alternatively,
-if any alternative is marked with quotes, then that is the one used.
-
-Examples:
-
- dir|d|directory	- Field name is 'dir'
- dir|d|'directory'	- Field name is 'directory'
- 
-
-When no arguments are specifed, returns the hash of options/values
-
-=cut
-
-sub options
-{
-	my $this = shift ;
-	my ($options_aref) = @_ ;
-
-	my $options_href = $this->_options() ;
-	
-	if ($options_aref)
-	{
-#$this->prt_data("==Script->options($options_href) opts=", $options_aref) if $this->debug()>=5 ;
-
-		# If we're setting options, then add our extra set
-		my @combined_options = (@SCRIPT_OPTIONS, @$options_aref) ;
-		$this->SUPER::options(\@combined_options) ;
-
-#print "==Script->options($options_href) - DONE\n" if $this->debug()>=5 ;
-	}
-
-	return %$options_href ;
-}
 
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Modules::Script-E<gt>exit()>
+=item B<exit()>
 
 Exit the application.
  
@@ -288,7 +194,7 @@ print "EXIT: $exit_code\n" if $this->debug ;
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Modules::Script-E<gt>catch_error($error)>
+=item B<catch_error($error)>
 
 Function that gets called on errors. $error is as defined in L<App::Framework::Base::Object::ErrorHandle>
 
@@ -300,6 +206,8 @@ sub catch_error
 	my ($error) = @_ ;
 
 print "catch_error()\n" if $this->debug ;
+
+	$this->SUPER::catch_error($error) ;
 
 #TODO: This is just the App::Framework::Base::Object::ErrorHandle default_error_handler() code - could just use that (return handled=0)
 	my $handled = 0 ;
@@ -327,47 +235,16 @@ print "catch_error()\n" if $this->debug ;
 	return $handled ;
 }
 
-#--------------------------------------------------------------------------------------------
-
-=item C<App::Framework::Modules::Script-E<gt>run_cmd($cmd, [$cmd_args, [$exit_on_fail]])>
-
-Execute a specified command, return either the exit status [0=success] (in scalar context) or the 
-array of lines output by the command (in array context)
-
-If $exit_on_fail is set, then this routine reports the run results and exits if the return status is not 0
-
-NOTE: This interface is DIFFERENT to that employed by the underlying Run object. This form is meant to 
-be easier to use for Applications.
-
-
-=cut
-
-sub run_cmd
-{
-	my $this = shift ;
-	my ($cmd, $cmd_args, $exit_on_fail) = @_ ;
-	
-	my $rc = $this->runobj()->run('cmd' => $cmd, 'args' => $cmd_args) ;
-	
-	# Abort if run failed & we're asked to
-	if ($exit_on_fail && $rc)
-	{
-		my $message = "Error: run command \"$cmd $cmd_args\" returned with exit code $rc. Aborting.\n" ;
-		$message .= join "\n", $this->run_results() ;
-		$this->throw_fatal($message, 999) ;
-	}
-	
-	return wantarray ? $this->run_results() : $rc ;
-}
-
 
 # ============================================================================================
 # NEW METHODS
 # ============================================================================================
 
+# TODO: Move to Pod feature
+
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Modules::Script-E<gt>script_usage($level)>
+=item B<script_usage($level)>
 
 Show usage.
 
@@ -389,8 +266,6 @@ sub script_usage
 	$level ||= "" ;
 
 #$this->debug(1);
-	
-
 print "Start of script_usage($level)\n" if $this->debug ;
 	
 	# TODO: Work out a better way to convert pod without the use of external file!
@@ -444,6 +319,23 @@ print "End of script_usage()\n" if $this->debug ;
 
 # ============================================================================================
 # END OF PACKAGE
+
+=back
+
+=head1 DIAGNOSTICS
+
+Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
+
+=head1 AUTHOR
+
+Steve Price C<< <sdprice at cpan.org> >>
+
+=head1 BUGS
+
+None that I know of!
+
+=cut
+
 1;
 
 __END__

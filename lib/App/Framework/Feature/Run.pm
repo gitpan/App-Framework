@@ -1,32 +1,18 @@
-package App::Framework::Base::Run ;
+package App::Framework::Feature::Run ;
 
 =head1 NAME
 
-App::Framework::Base::Run - Execute external commands
+App::Framework::Feature::Run - Execute external commands
 
 =head1 SYNOPSIS
 
-use App::Framework::Base::Run ;
+use App::Framework::Feature::Run ;
 
 
 =head1 DESCRIPTION
 
+An application feature (see L<App::Framework::Feature>) that provides for external command running from within an application.
 
-=head1 DIAGNOSTICS
-
-Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
-
-=head1 AUTHOR
-
-Steve Price C<< <sdprice at cpan.org> >>
-
-=head1 BUGS
-
-None that I know of!
-
-=head1 INTERFACE
-
-=over 4
 
 =cut
 
@@ -42,16 +28,75 @@ our $VERSION = "1.003" ;
 #============================================================================================
 # USES
 #============================================================================================
-use App::Framework::Base::Object::Logged ;
+use App::Framework::Feature ;
 
 #============================================================================================
 # OBJECT HIERARCHY
 #============================================================================================
-our @ISA = qw(App::Framework::Base::Object::Logged) ; 
+our @ISA = qw(App::Framework::Feature) ; 
 
 #============================================================================================
 # GLOBALS
 #============================================================================================
+
+=head2 Fields
+
+=over 4
+
+=item B<cmd> - command string (program name)
+
+The program to run
+
+=item B<args> - any optional program arguments
+
+String containing program arguments (may be specified as part of the 'cmd' string instead)
+
+=item B<timeout> - optional timeout time in secs.
+
+When specified causes the program to be run as a forked child 
+
+=item B<nice> - optional nice level
+
+
+=item B<check_results> - optional results check subroutine
+
+results check subroutine which should be of the form:
+
+    check_results($results_aref)
+
+Where:
+    $results_aref = ARRAY ref to all lines of text
+
+Subroutine should return 0 = results ok; non-zero for program failed.
+
+=item B<progress> - optional progress subroutine
+
+progress subroutine which should be in the form:
+
+ progress($line, $linenum, $state_href)
+					   
+Where:
+     $line = line of text
+     $linenum = line number (starting at 1)
+     $state_href = An empty HASH ref (allows progress routine to store variables between calls)
+					     
+					     
+=item B<status> - Program exit status
+
+Reads as the program exit status
+
+=item B<results> - Program results
+
+ARRAY ref of program output text lines
+
+=item B<norun> - Flag used for debug
+
+Evaluates all parameters and prints out the command that would have been executed
+
+=back
+
+=cut
+
 
 my %FIELDS = (
 	# Object Data
@@ -71,20 +116,20 @@ my %FIELDS = (
 ) ;
 
 #============================================================================================
-# CONSTRUCTOR 
+
+=head2 CONSTRUCTOR
+
+=over 4
+
+=cut
+
 #============================================================================================
 
-=item C<App::Framework::Base::Run-E<gt>new([%args])>
+=item C<< App::Framework::Feature::Run->new([%args]) >>
 
 Create a new Run.
 
-The %args are specified as they would be in the B<set> method, for example:
-
-	'mmap_handler' => $mmap_handler
-
-The full list of possible arguments are :
-
-	'fields'	=> Either ARRAY list of valid field names, or HASH of field names with default values 
+The %args are specified as they would be in the B<set> method (see L</Fields>).
 
 =cut
 
@@ -102,14 +147,22 @@ sub new
 }
 
 
+#============================================================================================
+
+=back
+
+=head2 CLASS METHODS
+
+=over 4
+
+=cut
 
 #============================================================================================
-# CLASS METHODS 
-#============================================================================================
+
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>init_class([%args])>
+=item C<< App::Framework::Feature::Run->init_class([%args]) >>
 
 Initialises the Run object class variables.
 
@@ -129,12 +182,40 @@ sub init_class
 }
 
 #============================================================================================
-# OBJECT METHODS 
+
+=back
+
+=head2 OBJECT METHODS
+
+=over 4
+
+=cut
+
 #============================================================================================
+
+#-----------------------------------------------------------------------------
+
+=item C<< App::Framework::Feature->access([%args]) >>
+
+Provides access to the feature. Operates in two modes:
+
+* if no arguments are provided, returns the feature object
+* if arguments are provided, calls the 'run()' method, then returns the object
+
+=cut
+
+sub access
+{
+	my $this = shift ;
+	my (%args) = @_ ;
+	
+	$this->run(%args) if %args ;
+	return $this ;
+}
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>run([%args])>
+=item C<< App::Framework::Feature::Run->run([%args]) >>
 
 Execute a command, return exit status (0=success)
 
@@ -148,14 +229,15 @@ sub run
 	# See if this is a class call
 	$this = $this->check_instance() ;
 
-$this->prt_data("run_cmd: this=", $this) if $this->debug() ;
+$this->prt_data("run() this=", $this) if $this->debug()>=10 ;
+$this->prt_data("run() args=", \%args) if $this->debug() ;
 	
 	# Set any specified args
 	$this->set(%args) ;
 
 	# Get command
 	my $cmd = $this->cmd() ;
-	croak "command not specified" unless $cmd ;
+	$this->throw_fatal("command not specified") unless $cmd ;
 	
 	# Add niceness
 	my $nice = $this->nice() ;
@@ -172,8 +254,8 @@ $this->prt_data("run_cmd: this=", $this) if $this->debug() ;
 	# Check arguments
 	my $args = $this->check_args() ;
 
-	# If specified, use logging output
-	$this->log("== Run: $cmd $args ==\n") ;
+#	# If specified, use logging output
+#	$this->log("== Run: $cmd $args ==\n") ;
 
 	# Run command and save results
 	my @results ;
@@ -191,8 +273,8 @@ $this->prt_data("run_cmd: this=", $this) if $this->debug() ;
 		($rc, @results) = $this->_run_cmd($cmd, $args) ;		
 	}
 
-	# If specified, use logging output
-	$this->log(@results) ;
+#	# If specified, use logging output
+#	$this->log(@results) ;
 	
 	# Update vars
 	$this->status($rc) ;
@@ -204,7 +286,7 @@ $this->prt_data("run_cmd: this=", $this) if $this->debug() ;
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>run_results([%args])>
+=item C<< App::Framework::Feature::Run->run_results([%args]) >>
 
 Execute a command, return output lines
 
@@ -223,7 +305,7 @@ sub run_results
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>run_cmd($cmd, [%args])>
+=item C<< App::Framework::Feature::Run->run_cmd($cmd, [%args]) >>
 
 Execute a specified command, return exit status (0=success)
 
@@ -239,7 +321,7 @@ sub run_cmd
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>run_cmd_results($cmd, [%args])>
+=item C<< App::Framework::Feature::Run->run_cmd_results($cmd, [%args]) >>
 
 Execute a specified command, return output lines
 
@@ -257,7 +339,7 @@ sub run_cmd_results
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>clear_args()>
+=item C<< App::Framework::Feature::Run->clear_args() >>
 
 Clear out command args (ready for calls of the add_args method)
 
@@ -274,7 +356,7 @@ sub clear_args
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>add_args($args)>
+=item C<< App::Framework::Feature::Run->add_args($args) >>
 
 Add arguments from parameter $args.
 
@@ -296,7 +378,7 @@ sub add_args
 		
 	}
 	
-die "Method not implemented" ;
+$this->throw_fatal("Method not implemented") ;
 
 	return $args ;
 }
@@ -305,7 +387,7 @@ die "Method not implemented" ;
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>check_args()>
+=item C<< App::Framework::Feature::Run->check_args() >>
 
 Ensure arguments are correct
 
@@ -315,7 +397,7 @@ sub check_args
 {
 	my $this = shift ;
 
-	my $args = $this->args() ;
+	my $args = $this->args() || "" ;
 	
 	# If there is no redirection, just add redirect 2>1
 	if ($args !~ /\>/)
@@ -328,7 +410,7 @@ sub check_args
 
 #--------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Run-E<gt>print_run([%args])>
+=item C<< App::Framework::Feature::Run->print_run([%args]) >>
 
 Display the full command line as if it was going to be run
 
@@ -347,7 +429,7 @@ sub print_run
 
 	# Get command
 	my $cmd = $this->cmd() ;
-	croak "command not specified" unless $cmd ;
+	$this->throw_fatal("command not specified") unless $cmd ;
 	
 	# Check arguments
 	my $args = $this->check_args() ;
@@ -367,20 +449,28 @@ sub _run_cmd
 {
 	my $this = shift ;
 	my ($cmd, $args) = @_ ;
+
+print "_run_cmd($cmd) args=$args\n" if $this->debug() ;
 	
 	my @results ;
 #	@results = `$cmd $args` unless $this->option('norun') ;
 	@results = `$cmd $args` unless $this->norun() ;
 	my $rc = $? ;
 
+	foreach (@results)
+	{
+		chomp $_ ;
+	}
+
 	# if it's defined, call the progress checker for each line
 	my $progress = $this->progress() ;
 	if (defined($progress))
 	{
+		my $linenum = 0 ;
 		my $state_href = {} ;
 		foreach (@results)
 		{
-			&$progress($_, $state_href) ;
+			&$progress($_, ++$linenum, $state_href) ;
 		}
 	}
 
@@ -395,21 +485,20 @@ sub _run_cmd
 #Execute a command in the background, gather output, return status.
 #If timeout is specified (in seconds), process is killed after the timeout period.
 #
-#TODO: Need to handle errors better, rather than just die-ing
-#
 sub _run_timeout
 {
 	my $this = shift ;
 	my ($cmd, $args, $timeout) = @_ ;
 
+print "_run_timeout($cmd) timeout=$timeout args=$args\n" if $this->debug() ;
+
 	# Run command and save results
 	my @results ;
 
 	# Run command but time it and kill it when timed out
-	my $old_sig_alrm = $SIG{ALRM} ;
 	if ($timeout)
 	{
-		$SIG{ALRM} = sub { 
+		local $SIG{ALRM} = sub { 
 			# normal execution
 			die "timeout" ;
 		};
@@ -431,6 +520,7 @@ sub _run_timeout
 
 		while(<$proc>)
 		{
+			chomp $_ ;
 			push @results, $_ ;
 
 			++$linenum ;
@@ -463,10 +553,10 @@ sub _run_timeout
 		{
 			# Failed
 			alarm(0) if $timeout ;
-			die $@ ;
+			$this->throw_fatal( $@ ) ;
 		}
 	}
-	$SIG{ALRM} = $old_sig_alrm ;
+#	$SIG{ALRM} = 'DEFAULT' ;
 
 	# if it's defined, call the results checker for each line
 	$rc ||= $this->_check_results(\@results) ;
@@ -496,6 +586,23 @@ sub _check_results
 
 # ============================================================================================
 # END OF PACKAGE
+
+=back
+
+=head1 DIAGNOSTICS
+
+Setting the debug flag to level 1 prints out (to STDOUT) some debug messages, setting it to level 2 prints out more verbose messages.
+
+=head1 AUTHOR
+
+Steve Price C<< <sdprice at cpan.org> >>
+
+=head1 BUGS
+
+None that I know of!
+
+=cut
+
 1;
 
 __END__

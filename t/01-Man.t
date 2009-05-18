@@ -16,7 +16,6 @@ my $VERBOSE=0;
 
 	diag( "Testing usage" );
 	
-	my @sections = qw/NAME SYNOPSIS OPTIONS DESCRIPTION/ ;
 	my @man = (
 		'Must specify input file "source"',
 		'-help|h               Print help',
@@ -28,20 +27,24 @@ my $VERBOSE=0;
 		'-array <string>       An array           \(option may be specified multiple times\)',
 		'-hash <key=value>     A hash             \(option may be specified multiple times\)',
 	) ;
-	my @mandev = (
-		'-pod                  Output full pod',
-		'-dbg-data             Debug option: Show __DATA__',
-		'-dbg-data-array       Debug option: Show all __DATA__ items',
-		'-int=i                An integer',
-		'-float=f              An float',
-		'-array=s@             An array',
-		'-hash=s%              A hash',
+
+	my @expected = (
+           '-log',           
+           '-verbose',             
+           '-norun',            
+           '-debug',            
+           '-help',         
+           '-man',         
 	) ;
 
-	plan tests => 1 + scalar(@sections) + scalar(@man) + scalar(@mandev) ;
+	plan tests => scalar(@man) + scalar(@expected) ;
 	
+	## Manual pages
+	
+
+
 	## Standard error catch with usage
-	my $app = App::Framework->new('exit_type'=>'die') ;
+#	my $app = App::Framework->new('exit_type'=>'die') ;
 	
 	# Expect output (stdout):
 	#
@@ -70,136 +73,26 @@ my $VERBOSE=0;
 
 		open(STDOUT, '>', \$stdout)  or die "Can't open STDOUT: $!" ;
 		open(STDERR, '>', \$stderr) or die "Can't open STDERR: $!";
-	
-#		App::Framework->new('exit_type'=>'die')->go() ;
-		$app->go() ;
+
+		@ARGV = () ;	
+		App::Framework->new('exit_type'=>'die')->go() ;
+#		$app->go() ;
 	} ;
+
+print "App: $stdout\n\n" ;
 
 	foreach my $test (@man)
 	{
-		like  ($stdout, qr/$test/im);
+		like  ($stdout, qr/$test/im, "Man page entry existance: $test");
 	}
 
-
-
-	## Manual pages
-	
-	#	NAME
-	#	    01-Man (v1.000) - Tests manual page creation
-	#	
-	#	SYNOPSIS
-	#	    01-Man [options] <source (input file)>
-	#	
-	#	    Options:
-	#	
-	#	           -debug=s              Set debug level    
-	#	           -h|help               Print help 
-	#	           -man                  Full documentation 
-	#	           -pod                  Output full pod    
-	#	           -debug-show-data      Debug option: Show __DATA__        
-	#	           -debug-show-data-array Debug option: Show all __DATA__ items     
-	#	           -log|L=s              Log file   
-	#	           -v|verbose            Verbose output     
-	#	           -dryrun|norun         Dry run    
-	#	           -n|name=s             Test name  
-	#	           -nomacro              Do not create test macro calls
-	#	
-	#	OPTIONS
-	#	    -debug=s
-	#	            Set the debug level value
-	#	
-	#	    -h|help Show brief help message then exit
-	#	
-	#	    -man    Show full man page then exit
-	#	
-	#	    -pod    Show full man page as pod then exit
-	#	
-	#	    -debug-show-data
-	#	            Show __DATA__ definition in script then exit
-	#	
-	#	    -debug-show-data-array
-	#	            Show all processed __DATA__ items then exit
-	#	
-	#	    -log|L=s
-	#	            Specify a log file
-	#	
-	#	    -v|verbose
-	#	            Make script output more verbose
-	#	
-	#	    -dryrun|norun
-	#	            Do not execute anything that would alter the file system, just
-	#	            show the commands that would have executed
-	#	
-	#	    -n|name=s
-	#	            Specify a test name. This determines the output filenames (for
-	#	            the test script .ts and menu file .db).
-	#	
-	#	            Default action is to use the control file name (without file
-	#	            extension).
-	#	
-	#	    -nomacro
-	#	            Normally the script automatically inserts a call to 'test_start'
-	#	            at the beginning of the test, and 'test_passed' at the end of
-	#	            the test. In both cases, the macros are called with the quoted
-	#	            string that is the full 'path' of the test name.
-	#	
-	#	            The test path being the menu names, separated by '::' down to
-	#	            the actual test name
-	#	
-	#	DESCRIPTION
-	#	    01-Man reads the control file to pull together fragments of test script.
-	#	    Creates a single test script file and a test menu.
-	#	
-	$stdout="" ;
-	$stderr="" ;
-	
-	eval{
-		local *STDOUT ;
-		local *STDERR ;
-
-		open(STDOUT, '>', \$stdout)  or die "Can't open STDOUT: $!" ;
-		open(STDERR, '>', \$stderr) or die "Can't open STDERR: $!";
-	
-		push @ARGV, '-man-dev' ;
-#		App::Framework->new('exit_type'=>'die')->go() ;
-		$app->go() ;
-		pop @ARGV ;
-	} ;
-
-	#           -pod                  Output full pod
-	#           -dbg-data             Debug option: Show __DATA__
-	#           -dbg-data-array       Debug option: Show all __DATA__ items
-	#           -log|L=s              Override the log   [Default: tmp.log]
-	#           -v|verbose            Verbose output
-	#           -dryrun|norun         Dry run
-	#           -database=s           Database name      [Default: test]
-	#           -int=i                An integer
-	#           -float=f              An float
-	#           -array=s@             An array
-	#           -hash=s%              A hash
-	#
-	foreach my $test (@mandev)
+	## expect these options once & only once
+	foreach my $opt (@expected)
 	{
-		like  ($stdout, qr/$test/im);
+		my $count = ($stdout =~ m/$opt/) ;
+		is ($count, 1, "Single option $opt") ; 
 	}
-	
 
-	# split into sections then check the sections
-	my %man = split_man($stdout) ;
-	
-	foreach my $section (@sections)
-	{
-		ok(exists($man{$section})) ;
-	}
-	
-	if ($man{'NAME'} =~ m/\(v$VERSION\)/)
-	{
-		pass("Version check") ;
-	}
-	else
-	{
-		fail("Version check - got: $man{'NAME'} expected: $VERSION") ;
-	}
 
 
 #=================================================================================
@@ -209,7 +102,7 @@ my $VERBOSE=0;
 #----------------------------------------------------------------------
 # Main execution
 #
-sub run
+sub app
 {
 	my ($app) = @_ ;
 	
@@ -256,9 +149,9 @@ __DATA__
 
 Tests manual page creation
 
-[NAMEARGS]
+[ARGS]
 
-source:f
+* source=f		Source file
 
 [OPTIONS]
 

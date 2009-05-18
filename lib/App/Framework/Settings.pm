@@ -1,8 +1,8 @@
-package App::Framework::Config ;
+package App::Framework::Settings ;
 
 =head1 NAME
 
-App::Framework::Config - Application framework configuration
+App::Framework::Settings - Application framework configuration
 
 =head1 DESCRIPTION
 

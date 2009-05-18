@@ -41,7 +41,7 @@ use Carp ;
 use Cwd ;
 
 
-our $VERSION = "2.001" ;
+our $VERSION = "2.002" ;
 
 require Exporter ;
 our @ISA = qw(Exporter);
@@ -51,6 +51,7 @@ our @EXPORT =qw(
 our @EXPORT_OK	=qw(
 	prt_data
 	prtstr_data
+	exclude
 
 	debug 
 	verbose
@@ -58,6 +59,7 @@ our @EXPORT_OK	=qw(
 	$DEBUG 
 	$VERBOSE
 	$PRINT_OBJECTS
+	$PREFIX
 );
 
 
@@ -74,10 +76,12 @@ our $DEBUG = 0 ;
 our $VERBOSE = 0 ;
 our $PRINT_OBJECTS = 0 ;
 our $QUOTE_VALS = 0 ;
+our $PREFIX = 0 ;
 
 my $level ;
 my %already_seen ;
 my $prt_str ;
+my %excludes ;
 
 
 #============================================================================================
@@ -86,7 +90,7 @@ my $prt_str ;
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::DumpObj::debug($level)>
+=item C<debug($level)>
 
 Set debug print options to B<$level>. 
 
@@ -112,7 +116,7 @@ sub debug
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::DumpObj::verbose($level)>
+=item C<verbose($level)>
 
 Set vebose print options to B<$level>. 
 
@@ -138,7 +142,7 @@ sub verbose
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::DumpObj::print_objects_flag($flag)>
+=item C<print_objects_flag($flag)>
 
 Set option for printing out objects to B<$flag>. 
 
@@ -164,7 +168,7 @@ sub print_objects_flag
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::DumpObj::quote_vals_flag($flag)>
+=item C<quote_vals_flag($flag)>
 
 Set option quoting the values to B<$flag>. 
 
@@ -189,11 +193,56 @@ sub quote_vals_flag
 	return $old ;
 }
 
+#---------------------------------------------------------------------------------------------------
+
+=item C<exclude(@list)>
+
+Set the list of excluded HASH keys. Any keys in a HASH that match the name(s) in the list will not be
+displayed.
+
+Specifying an empty list clears the excludes
+
+=cut
+
+sub exclude
+{
+	my (@list) = @_ ;
+	
+	%excludes = () ;
+	%excludes = map {$_ => 1} @list ;
+
+	return  ;
+}
+
+#---------------------------------------------------------------------------------------------------
+
+=item C<prefix($prefix)>
+
+Prefix all output lines with B<$prefix>
+
+Returns previous value
+
+=cut
+
+sub prefix
+{
+	my ($prefix) = @_ ;
+	
+	my $old = $PREFIX ;
+
+	if (defined($prefix)) 
+	{
+		# set this module debug flag & sub-modules
+		$PREFIX = $prefix ; 
+	}
+	return $old ;
+}
+
 
 
 #---------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::DumpObj::prtstr_data(@list)>
+=item C<prtstr_data(@list)>
 
 Create a multiline string of all items in the list. Handles scalars, hashes (as an array),
 arrays, ref to scalar, ref to hash, ref to array, object.
@@ -225,7 +274,7 @@ sub prtstr_data
 
 #---------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::DumpObj::prt_data(@list)>
+=item C<prt_data(@list)>
 
 Print out each item in the list. Handles scalars, hashes (as an array),
 arrays, ref to scalar, ref to hash, ref to array, object.
@@ -260,41 +309,46 @@ sub _print_ref
 {
     my $r = $_[0];
 
-    if (exists ($already_seen{$r})) 
-	 {
-        _print_indented ("# $r (Seen earlier)");
+    if (!defined($r)) 
+	{
+        _print_indented ("undef\n");
         return;
     } 
-	 else 
-	 {
+    elsif (exists ($already_seen{$r})) 
+	{
+        _print_indented ("# $r (Seen earlier)\n");
+        return;
+    } 
+	else 
+	{
         $already_seen{$r}=1;
     }
 
     my $ref_type = ref($r);
 
     if ($ref_type eq "ARRAY") 
-	 {
+	{
         _print_array($r);
     } 
-	 elsif ($ref_type eq "SCALAR") 
-	 {
-        print "# Ref -> $r";
+	elsif ($ref_type eq "SCALAR") 
+	{
         _print_scalar($$r);
+        _print_str(" # Ref -> $r\n");
     } 
-	 elsif ($ref_type eq "HASH") 
-	 {
+	elsif ($ref_type eq "HASH") 
+	{
         _print_hash($r);
     } 
-	 elsif ($ref_type eq "REF") 
-	 {
+	elsif ($ref_type eq "REF") 
+	{
         ++$level;
-        _print_indented("# Ref -> ($r)");
+        _print_indented("# Ref -> ($r)\n");
         _print_ref($$r);
         --$level;
     } 
-	 else 
-	 {
-       _print_indented ("# OBJECT $ref_type");
+	else 
+	{
+        _print_indented ("# OBJECT $ref_type\n");
 
 		# If required (and we can) print out the object
 		if ($PRINT_OBJECTS) 
@@ -318,19 +372,20 @@ sub _print_array
     my ($r_array) = @_;
 
     ++$level;
-    _print_indented ("[ # $r_array");
+    _print_indented ("[ # $r_array\n");
     foreach my $var (@$r_array) 
-	 {
+	{
         if (ref ($var)) 
-		 {
+		{
             _print_ref($var);
         } 
-		 else 
-		 {
+		else 
+		{
             _print_scalar($var);
+            _print_str(",\n");
         }
     }
-    _print_indented ("],");
+    _print_indented ("],\n");
     --$level;
 }
 
@@ -342,7 +397,7 @@ sub _print_hash
     my($key, $val);
     ++$level; 
 
-    _print_indented ("{ # $r_hash");
+    _print_indented ("{ # $r_hash\n");
 
 #    while (($key, $val) = each %$r_hash) 
 	 foreach my $key (sort keys %$r_hash)
@@ -360,18 +415,25 @@ sub _print_hash
 
         ++$level;
 
-        if (ref ($val)) 
-		 {
-            _print_indented ("$key => ");
-            _print_ref($val);
-        } 
-		 else 
-		 {
-            _print_indented ("$key => $val,");
-        }
+		if (exists($excludes{$key}))
+		{
+            _print_indented ("$key => ...\n");
+		}
+		else
+		{
+	        if (ref ($val)) 
+			{
+	            _print_indented ("$key => \n");
+	            _print_ref($val);
+	        } 
+			else 
+			{
+	            _print_indented ("$key => $val,\n");
+	        }
+		}
         --$level;
     }
-    _print_indented ("},");
+    _print_indented ("},\n");
     --$level;
 }
 
@@ -379,30 +441,52 @@ sub _print_hash
 sub _print_indented 
 {
     my $spaces = "  " x $level;
-    $prt_str .= "${spaces}" ;
-	 _print_val($_[0]) ;
-    $prt_str .= "\n" ;
+    if ($PREFIX)
+    {
+    	# print prefix at start of a line
+		if (!$prt_str)
+		{
+	    	_print_str("$PREFIX") ;
+		}
+		elsif ($prt_str =~ m/(.*)\n$/)
+		{
+	    	_print_str("$PREFIX") ;
+		}
+    }
+    _print_str("${spaces}") ;
+	_print_val($_[0]) ;
+#    $prt_str .= "\n" ;
 }
 
 
 #---------------------------------------------------------------------------------------------------
 sub _print_val 
 {
-	if (defined($_[0])) 
+	my ($val) = @_ ;
+	
+	if (defined($val)) 
 	{
-		$prt_str .= "$_[0]" ;
+		_print_str("$val") ;
 
 		# Print positive numerical value in hex too
-		if ($_[0] =~ m/(^|\s+)(\d+)$/) 
+		if ($val =~ m/(^|\s+)(\d+)$/) 
 		{
-		   $prt_str .= sprintf "  # [0x%0x]", $2 if ($2 > 0) ;
+		   _print_str(sprintf "  # [0x%0x]", $2) if ($2 > 0) ;
 		}
 	}
 	else 
 	{
-		$prt_str .= "undef" ;
+		_print_str("undef") ;
 	}
 
+}
+
+#---------------------------------------------------------------------------------------------------
+sub _print_str 
+{
+	my ($str) = @_ ;
+	
+	$prt_str .= $str ;
 }
 
 

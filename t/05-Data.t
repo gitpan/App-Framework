@@ -1,9 +1,10 @@
 #!/usr/bin/perl
 #
 use strict ;
-use Test::More tests => 6;
+use Test::More;
 
 use App::Framework ;
+use App::Framework::Base ;
 
 # VERSION
 our $VERSION = '1.234' ;
@@ -77,9 +78,17 @@ NAMED3
 my %NAMED = (
 	'named1' => $NAMED1,
 	'named2' => $NAMED2,
-	'named3' => $NAMED3,
+#	'named3' => $NAMED3,
+#
+#	'data1' => $NAMED1,
+#	'data2' => $NAMED2,
+#	'data3' => $NAMED3,
 ) ;
 	
+	plan tests => 2 * (keys %NAMED) ;
+
+$App::Framework::Base::class_debug = 2 ;
+
 	App::Framework->new()->go() ;
 
 
@@ -93,17 +102,15 @@ my %NAMED = (
 #----------------------------------------------------------------------
 # Main execution
 #
-sub run
+sub app
 {
 	my ($app) = @_ ;
 	
-	test_str($app, 'named1') ;
-	test_str($app, 'named2') ;
-	test_str($app, 'named3') ;
-	
-	test_array($app, 'named1') ;
-	test_array($app, 'named2') ;
-	test_array($app, 'named3') ;
+	foreach my $name (sort keys %NAMED)
+	{
+		test_str($app, $name) ;
+		test_array($app, $name) ;
+	}
 }
 
 
@@ -120,6 +127,7 @@ sub test_str
 {
 	my ($app, $which) = @_ ;
 
+print "test string : $which\n" ;
 	my $named = $app->data($which) ;
 	my $expected = $NAMED{$which} ;
 	chomp $expected ; 
@@ -132,6 +140,8 @@ sub test_str
 sub test_array
 {
 	my ($app, $which) = @_ ;
+
+print "test array : $which\n" ;
 
 	my @NAMED = split "\n", $NAMED{$which} ;
 	my @named = $app->data($which) ;
@@ -190,9 +200,9 @@ string will be used as the option name. Alternatively, you may surround the pref
 
   -n|'number'=s
   
-The option names/values are stored in a hash retrieved as $app->options():
+The option names/values are stored in a hash retrieved as \$app->options():
 
-  my %opts = $app->options();
+  my %opts = \$app->options();
   
 Each option specification can optional append '=s' to the name to specify that the option expects a value (otherwise the option is treated
 as a boolean flag), and a default value may be specified enclosed in '[]'.
@@ -204,8 +214,8 @@ App::Framework automatically pushes some extra directories at the start of the P
 modules without having to install them globally on a system. The path of the executing Perl application is found by following any links until
 an actually Perl file is found. The @INC array has the following added:
 
-	* $progpath
-	* $progpath/lib
+	* \$progpath
+	* \$progpath/lib
 	
 i.e. The directory that the Perl file resides in, and a sub-directory 'lib' will be searched for application-specific modules.
 __#================================================================================

@@ -1,0 +1,6 @@
+=head1 NAME
+
+Oops! Should have run 'modpod' to create installation pod file.
+
+=cut
+
