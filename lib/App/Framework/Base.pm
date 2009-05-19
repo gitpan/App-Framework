@@ -18,7 +18,7 @@ Base object for all application objects (core/extensions/features etc)
 use strict ;
 use Carp ;
 
-our $VERSION = "1.000" ;
+our $VERSION = "1.100" ;
 
 #============================================================================================
 # USES

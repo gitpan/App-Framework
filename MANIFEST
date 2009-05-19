@@ -57,6 +57,7 @@ t/args/dir/dummy
 t/args/exists
 t/args/file
 t/args/array
+t/test/runtest.pl
 t/lib/MyAppLib.pm
 t/config/20-Feature-Config.conf
 t/config2/20-Feature-Config.conf

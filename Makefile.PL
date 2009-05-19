@@ -67,9 +67,7 @@ modpod: pm_to_blib $(TO_INST_PM)
 
 }
 
-## clean out old install
-sub MY::install {
-}
+## clean out old installation
 
 WriteAll() ;
 

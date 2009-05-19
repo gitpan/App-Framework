@@ -1,5 +1,8 @@
 Revision history for App-Framework
 
+0.91    Tue May 18 08:07:00 2009
+		MANIFEST corrections
+
 0.90    Mon May 18 12:30:00 2009
 		Major re-write to make the framework modular. Now has core/extensions/features
 		NOTE: Application 'run' subroutine renamed to 'app'
