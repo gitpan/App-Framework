@@ -370,19 +370,88 @@ then the arguments can be accessed as:
 
 =head2 Advanced
 
-????
+In addition to the straightforward cases described above, additional features may be optionally included into the script as described below.
 
 =head3 Data sections
 
-????
+The framework installs the 'Data' feature automatically in order to process the script settings. The user may then add additional data sections
+below the setup. These data sections can be named, and the data contents accessed via this name. Also, the contents (text) of the data sections
+may contain variables the are expanded from the current settings of options, application setup, or the environment variables.
+
+For example, the following data definition:
+
+    __DATA__
+    
+    [SUMMARY]
+    Tests the application object with SQL
+    
+    [DESCRIPTION]
+    
+    B<$name> will ensure that table 'listings2' is created in the specified database. It will then
+    add some rows, show them, and then delete them.
+    
+    
+    [OPTIONS]
+    
+    -database=s    Database name
+    
+    Specify the database name to use
+    
+    -table=s       Table name
+    
+    Specify a different table
+    
+    
+    __#=============================================================================================================================
+    __DATA__ sql
+    
+    -- --------------------------------------------------------
+    -- 
+    -- Table structure for table `$table`
+    -- 
+    DROP TABLE IF EXISTS `$table`;
+    CREATE TABLE IF NOT EXISTS `$table` (
+      `pid` varchar(128) NOT NULL,
+      `title` varchar(128) NOT NULL,
+      `date` date NOT NULL,
+      `start` time NOT NULL,
+      KEY `pid` (`pid`),
+    ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+and script command arguments:
+
+  -table listings2
+
+result in the data section 'sql' being expanded to:
+
+    -- --------------------------------------------------------
+    -- 
+    -- Table structure for table `listings2`
+    -- 
+    DROP TABLE IF EXISTS `listings2`;
+    CREATE TABLE IF NOT EXISTS `listings2` (
+      `pid` varchar(128) NOT NULL,
+      `title` varchar(128) NOT NULL,
+      `date` date NOT NULL,
+      `start` time NOT NULL,
+      KEY `pid` (`pid`),
+    ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+For further details see L<App::Framework::Feature::Data>
 
 =head3 Configurations
 
-????
+B<THIS SECTION TO BE COMPLETED>
+
+For further details see L<App::Framework::Feature::Config>
+
 
 =head3 Running external programs
 
-????
+B<THIS SECTION TO BE COMPLETED>
+
+For further details see L<App::Framework::Feature::Run>
 
 
 =cut

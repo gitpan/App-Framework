@@ -78,11 +78,11 @@ Example extensions (may not be installed on your system):
 
 =item Daemon
 
-Selecting this extension converts the command line script into a daemon
+Selecting this extension converts the command line script into a daemon (see L<App::Framework::Extension::Daemon>)
 
 =item Filter
 
-Sets up the application for file filtering, the framework doing most of the work in the background
+Sets up the application for file filtering, the framework doing most of the work in the background (see L<App::Framework::Extension::Filter>).
 
 =item Find
 
@@ -105,15 +105,15 @@ Example features (may not be installed on your system):
 =item Config
 
 Provides the application with configuration file support. Automatically uses the configuration file for all command line option
-settings.
+settings (see L<App::Framework::Feature::Config>).
 
 =item Sql
 
-Provides a simplified interface to MySQL. Provides easy set up for Sql operations delete, update, select etc.
+Provides a simplified interface to MySQL. Provides easy set up for Sql operations delete, update, select etc (see L<App::Framework::Feature::Sql>).
 
 =item Mail
 
-Provides mail send support (including file attachment)
+Provides mail send support (including file attachment)  (see L<App::Framework::Feature::Mail>).
 
 =back
 
@@ -281,20 +281,18 @@ The framework looks for these 3 functions to be defined in the script file. The 
 
 =head3 Setup
 
-?????? TO BE COMPLETED
+B<DOCUMENTATION FOR THIS SECTION TO BE COMPLETED>
 
 
 =head3 Data
 
-?????? TO BE COMPLETED
+B<DOCUMENTATION FOR THIS SECTION TO BE COMPLETED>
 
-
+See L<App::Framework::Feature::Data> for further details.
 
 =head2 Directories
 
-
-
-?????? TO BE COMPLETED
+B<DOCUMENTATION FOR THIS SECTION TO BE COMPLETED>
 
 
 
@@ -332,9 +330,6 @@ The following fields should be defined either in the call to 'new()' or as part 
  * description = Program description text
  * history = Release history information
  * version = Program version (default is value of 'our $VERSION')
- * options = Definition of program options (see below)
- * nameargs = Definition of the program arguments and their intended usage (see below)
- * sql = Definition of sql database connection & queries (see below)
 
  * app_start_fn = Function called before app() function (default is application-defined 'app_start' subroutine if available)
  * app_fn = Function called to execute program (default is application-defined 'app' subroutine if available)
@@ -343,16 +338,11 @@ The following fields should be defined either in the call to 'new()' or as part 
 
 During program execution, the following values can be accessed:
 
- * arglist = Array of the program arguments, in the order they were specified
- * arghash = Hash of the program arguments, named by the 'nameargs' field
  * package = Name of the application package (usually main::)
  * filename = Full filename path to the application (after following any links)
  * progname = Name of the program (without path or extension)
  * progpath = Pathname to program
  * progext = Extension of program
- 
-
-
 
 =cut
 
@@ -364,7 +354,7 @@ use Carp ;
 use App::Framework::Core ;
 
 
-our $VERSION = "0.91" ;
+our $VERSION = "0.92" ;
 
 
 #============================================================================================
@@ -424,7 +414,7 @@ sub import
 
 #----------------------------------------------------------------------------------------------
 
-=item C<< new([%args]) >>
+=item B< new([%args]) >
 
 Create a new object.
 
@@ -592,7 +582,7 @@ sub new
 
 #----------------------------------------------------------------------------------------------
 
-=item C<< modpod() >>
+=item B< modpod() >
 
 Create/update module pod files. Creates/updates the pod for the module lists: 
 L<App::Framework::FeatureModules>,L<App::Framework::ExtensionModules>,L<App::Framework::CoreModules>

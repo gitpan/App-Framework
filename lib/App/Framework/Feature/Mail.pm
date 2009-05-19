@@ -6,12 +6,16 @@ App::Framework::Feature::Mail - Send mail
 
 =head1 SYNOPSIS
 
-use App::Framework::Feature::Mail ;
+  use App::Framework '+Mail' ;
 
 
 =head1 DESCRIPTION
 
+Provides a simplified mail interface, and application error auto-mailing.
 
+B<DOCUMENTATION TO BE COMPLETED>
+
+B<BETA CODE ONLY - NOT TO BE USED IN PRODUCTION SCRIPTS>
 
 =cut
 

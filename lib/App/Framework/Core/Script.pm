@@ -6,9 +6,15 @@ App::Framework::Core::Script - App::Framework command line script personality
 
 =head1 SYNOPSIS
 
+  # Script is loaded by default as if the script contained:
+  use App::Framework ':Script' ;
 
 
 =head1 DESCRIPTION
+
+This personality implements a standard command line script.
+
+B<DOCUMENTATION TO BE COMPLETED>
 
 Derived object from App::Framework::Core. Should only be called via App::Framework import.
 

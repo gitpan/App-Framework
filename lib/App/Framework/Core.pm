@@ -367,7 +367,7 @@ print "dynamic_isa() - $pkg already got ISA=",@{"${pkg}::ISA"}," (wanted to set 
 
 #-----------------------------------------------------------------------------
 
-=item C<< inherit($caller_class, [%args]) >>
+=item B< inherit($caller_class, [%args]) >
 
 Initialises the object class variables.
 
@@ -531,7 +531,7 @@ sub lib_glob
 
 #----------------------------------------------------------------------------
 
-=item C<isa_tree(package)>
+=item B<isa_tree(package)>
 
 Starting at I<package>, return a HASH ref in the form of a tree of it's parents. They keys are the parent module
 names, and the values are HASH refs of their parents and so on. Value is undef when last parent 
@@ -1642,7 +1642,7 @@ print "_expand_vars() - END\n" if $this->debug()>=2 ;
 
 #----------------------------------------------------------------------------
 #
-#=item C<_dumpisa(package)>
+#=item B<_dumpisa(package)>
 #
 #Starting at I<package>, show the parents
 #
@@ -1680,7 +1680,7 @@ no strict "refs" ;
 
 #----------------------------------------------------------------------------
 #
-#=item C<_dumpvar(package)>
+#=item B<_dumpvar(package)>
 #
 #Dump out all of the symbols in package I<package>
 #

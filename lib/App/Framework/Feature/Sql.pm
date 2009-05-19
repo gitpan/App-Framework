@@ -6,13 +6,14 @@ Sql - MySql interface
 
 =head1 SYNOPSIS
 
-use App::Framework::Feature::Sql ;
+  use App::Framework '+Sql' ;
 
 
 =head1 DESCRIPTION
 
 Provides a simplified interface to MySQL via DBI.
- 
+
+B<DOCUMENTATION TO BE COMPLETED>
 
 =cut
 
@@ -369,7 +370,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item C<set(%args)>
+=item B<set(%args)>
 
 Set one or more settable parameter.
 
@@ -422,7 +423,7 @@ sub set
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>prepare($prepare_href)>
+=item B<prepare($prepare_href)>
 
 Use HASH ref to create 1 or more STHs
 
@@ -447,7 +448,7 @@ sub prepare
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>trace(@args)>
+=item B<trace(@args)>
 
 Change trace level
 
@@ -476,7 +477,7 @@ sub trace
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>trace_file(@args)>
+=item B<trace_file(@args)>
 
 Change trace file
 
@@ -508,7 +509,7 @@ sub trace_file
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>connect(%args)>
+=item B<connect(%args)>
 
 Connects to database. Either uses pre-set values for user/password/database,
 or can use optionally specified args
@@ -554,7 +555,7 @@ sub connect
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>disconnect()>
+=item B<disconnect()>
 
 Disconnect from database (if connected)
 
@@ -588,7 +589,7 @@ sub disconnect
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>sth_create($name, $spec)>
+=item B<sth_create($name, $spec)>
 
 Prepare a named SQL query & store it for later execution by query_sth()
 
@@ -757,7 +758,7 @@ if ($this->debug())
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>sth_query($name, [@vals])>
+=item B<sth_query($name, [@vals])>
 
 Use a pre-prepared named sql query to return results. If the query has already been
 given a set of values, then use them; otherwise use the values specified in this call
@@ -832,7 +833,7 @@ sub sth_query
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>sth_query_all($name, [@vals])>
+=item B<sth_query_all($name, [@vals])>
 
 Use a pre-prepared named sql query to return results. Return all results in array.
 
@@ -858,7 +859,7 @@ sub sth_query_all
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>query($query [, @vals])>
+=item B<query($query [, @vals])>
 
 Query database
 
@@ -877,7 +878,7 @@ sub query
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>query_all($query)>
+=item B<query_all($query)>
 
 Query database - return array of complete results, each entry is a hash ref
 
@@ -901,7 +902,7 @@ sub query_all
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>do($sql)>
+=item B<do($sql)>
 
 Do sql command
 
@@ -930,7 +931,7 @@ sub do
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>do_sql_text($sql_text)>
+=item B<do_sql_text($sql_text)>
 
 Process the SQL text, split it into one or more SQL command, then execute each of them
 
@@ -951,7 +952,7 @@ sub do_sql_text
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>next([$name])>
+=item B<next([$name])>
 
 Returns hash ref to next row (as a result of query). Uses prepared STH name $name
 (as created by sth_create method), or default name (as created by query method)
@@ -986,7 +987,7 @@ sub next
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>tables()>
+=item B<tables()>
 
 Returns list of tables for this database
 
@@ -1003,7 +1004,7 @@ sub tables
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>datestr_to_sqldate($datestr)>
+=item B<datestr_to_sqldate($datestr)>
 
 Convert standard date string (d-MMM-YYYY) or (d/M/YY) to SQL based date (YYYY-MM-DD)
 	
@@ -1038,7 +1039,7 @@ sub datestr_to_sqldate
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>sqldate_to_date($sql_date)>
+=item B<sqldate_to_date($sql_date)>
 
 Convert SQL based date (YYYY-MM-DD) to standard date string (d-MMM-YYYY)
 	
@@ -1070,7 +1071,7 @@ sub sqldate_to_date
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>sqldate_to_datemanip($sql_date)>
+=item B<sqldate_to_datemanip($sql_date)>
 
 Convert SQL based date (YYYY-MM-DD) to a date string suitable for Date::Manip (d/M/YYYY)
 	
@@ -1102,7 +1103,7 @@ sub sqldate_to_datemanip
 
 #----------------------------------------------------------------------------
 
-=item C<App::Framework::Core-E<gt>sql_from_data($name)>
+=item B<sql_from_data($name)>
 
 NOTE: Only works when feature is registered with an application
 
@@ -1260,7 +1261,7 @@ sub sql_from_data
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sql_cmd($name)>
+=item B<_sql_cmd($name)>
 
 Convert $name into a sql command if possible
 
@@ -1286,7 +1287,7 @@ sub _sql_cmd
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sql_setvars($context, $spec, $vars_href)>
+=item B<_sql_setvars($context, $spec, $vars_href)>
 
 Set/add variables into the $vars_href HASH driven by the specification $spec (which may
 be a sql string or a HASH specification). Creates the variables in the namespace defined by
@@ -1465,7 +1466,7 @@ print " > _sql_setvars($context) - END [format=$format]\n" if $this->debug()>=2 
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sql_expand_vars($vars_href)>
+=item B<_sql_expand_vars($vars_href)>
 
 Expand all the variables in the HASH ref
 
@@ -1525,7 +1526,7 @@ print "_sql_expand_vars - END\n" if $this->debug()>=2 ;
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sql_expand_arrays($vars_href)>
+=item B<_sql_expand_arrays($vars_href)>
 
 Expand all the array variables in the HASH ref
 
@@ -1560,7 +1561,7 @@ print "_sql_expand_arrays() - END\n" if $this->debug()>=2 ;
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sql_expand_array($arr, $vars_href)>
+=item B<_sql_expand_array($arr, $vars_href)>
 
 Expand the named array
 
@@ -1621,7 +1622,7 @@ print "_sql_expand_array($array) - END\n" if $this->debug()>=2 ;
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sth_record($name)>
+=item B<_sth_record($name)>
 
 Returns the saved sth information looked up from $name; returns undef otherwise
 
@@ -1652,7 +1653,7 @@ sub _sth_record
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_sth_record_sth($name)>
+=item B<_sth_record_sth($name)>
 
 Returns the saved sth looked up from $name; returns undef otherwise
 
@@ -1685,7 +1686,7 @@ $this->throw_fatal( "Error: sth $name not created" ) ;
 
 #----------------------------------------------------------------------------
 
-=item C<Sql-E<gt>_set_trace($dbh, $trace, $trace_file)>
+=item B<_set_trace($dbh, $trace, $trace_file)>
 
 Update trace level
 

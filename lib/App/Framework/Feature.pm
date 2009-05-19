@@ -6,13 +6,18 @@ App::Framework::Feature - Application feature
 
 =head1 SYNOPSIS
 
-use App::Framework::Feature ;
+Features are accessed via the App::Framework object, for example:
+
+  use App::Framework '+Config' ;
+
+App::Framework::Feature is to be derived from and cannot be accessed directly.
 
 
 =head1 DESCRIPTION
 
 Provides the base object from which all features must be derived.
 
+B<DOCUMENTATION TO BE COMPLETED>
 
 =cut
 
@@ -145,7 +150,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item C<allowed_class_instance()>
+=item B<allowed_class_instance()>
 
 Returns 0 since this class can not have a class instance object
  

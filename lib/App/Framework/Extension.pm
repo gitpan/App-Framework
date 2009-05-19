@@ -65,7 +65,7 @@ my %FIELDS = (
 
 #============================================================================================
 
-=item C<< new([%args]) >>
+=item B< new([%args]) >
 
 Create a new Extension.
 
@@ -111,7 +111,7 @@ print "Extension - $class ISA=@ISA\n" if $this->debug ;
 
 #-----------------------------------------------------------------------------
 
-=item C<< init_class([%args]) >>
+=item B< init_class([%args]) >
 
 Initialises the object class variables.
 
@@ -145,7 +145,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item B<<heap([$level])>>
+=item B<heap([$level])>
 
 Returns HEAP space for the calling module
  
@@ -179,7 +179,7 @@ sub heap
 
 #----------------------------------------------------------------------------
 
-=item B<<extend_fn(%spec)>>
+=item B<extend_fn(%spec)>
 
 Hi-jack the specified application function. %spec is a HASH of:
 
@@ -216,7 +216,7 @@ sub extend_fn
 
 #----------------------------------------------------------------------------
 
-=item B<<call_extend_fn($pkg, $fn, @args)>>
+=item B<call_extend_fn($pkg, $fn, @args)>
 
 Calls the function with specified args. If not extended by the extension then just calls the
 default function.

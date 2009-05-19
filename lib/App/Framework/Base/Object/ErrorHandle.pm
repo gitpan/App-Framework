@@ -97,7 +97,7 @@ my $ERR_TYPE_NOTE = 0x04 ;
 # CONSTRUCTOR 
 #============================================================================================
 
-=item C<new([%args])>
+=item B<new([%args])>
 
 Create a new App::Framework::Base::Object::ErrorHandle.
 
@@ -132,7 +132,7 @@ sub new
 
 #-----------------------------------------------------------------------------
 
-=item C<init_class([%args])>
+=item B<init_class([%args])>
 
 Initialises the App::Framework::Base::Object::ErrorHandle object class variables. Creates a class instance so that these
 methods can also be called via the class (don't need a specific instance)
@@ -164,7 +164,7 @@ sub init_class
 
 #-----------------------------------------------------------------------------
 
-=item C<add_global_error($error)>
+=item B<add_global_error($error)>
 
 Add a new error to the Class list keeping track of all runtime errors
 
@@ -180,7 +180,7 @@ sub _global_error
 
 #-----------------------------------------------------------------------------
 
-=item C<global_error([%args])>
+=item B<global_error([%args])>
 
 Add a new error to the Class list keeping track of all runtime errors
 
@@ -206,7 +206,7 @@ sub global_error
 
 #-----------------------------------------------------------------------------
 
-=item C<global_last_error()>
+=item B<global_last_error()>
 
 Returns a hash containing the information from the last error stored in the global list
 
@@ -232,7 +232,7 @@ sub global_last_error
 
 #-----------------------------------------------------------------------------
 
-=item C<global_errors()>
+=item B<global_errors()>
 
 Returns the list of all errors
 
@@ -247,7 +247,7 @@ sub global_errors
 
 #-----------------------------------------------------------------------------
 
-=item C<any_error()>
+=item B<any_error()>
 
 Returns a hash containing the information from the last actual error (i.e. only 'fatal' or 'nonfatal' types) stored 
 in the global list
@@ -274,7 +274,7 @@ sub any_error
 
 #-----------------------------------------------------------------------------
 
-=item C<error_check($error, $mask)>
+=item B<error_check($error, $mask)>
 
 Returns TRUE if the $error object type matches the mask 
 
@@ -303,7 +303,7 @@ sub error_check
 
 #-----------------------------------------------------------------------------
 
-=item C<is_error($error)>
+=item B<is_error($error)>
 
 Returns TRUE if the $error object is either 'fatal' or 'nonfatal' 
 
@@ -319,7 +319,7 @@ sub is_error
 
 #-----------------------------------------------------------------------------
 
-=item C<is_warning($error)>
+=item B<is_warning($error)>
 
 Returns TRUE if the $error object is 'warning' 
 
@@ -335,7 +335,7 @@ sub is_warning
 
 #-----------------------------------------------------------------------------
 
-=item C<is_note($error)>
+=item B<is_note($error)>
 
 Returns TRUE if the $error object is 'note' 
 
@@ -352,7 +352,7 @@ sub is_note
 
 #-----------------------------------------------------------------------------
 
-=item C<error_split($error)>
+=item B<error_split($error)>
 
 Split the error object into component parts and return them in an ARRAY:
 
@@ -380,7 +380,7 @@ sub error_split
 
 #-----------------------------------------------------------------------------
 
-=item C<register_global_handler($code_ref)>
+=item B<register_global_handler($code_ref)>
 
 Add a new global error handler on to the stack
 
@@ -396,7 +396,7 @@ sub register_global_handler
 
 #-----------------------------------------------------------------------------
 
-=item C<default_error_handler($error)>
+=item B<default_error_handler($error)>
 
 Last ditch attempt to handle errors. Uses die(), warn() etc as appropriate.
 
@@ -440,7 +440,7 @@ sub default_error_handler
 
 #-----------------------------------------------------------------------------
 
-=item C<_throw_error($error)>
+=item B<_throw_error($error)>
 
 Add a new error to this object instance, also adds the error to this Class list
 keeping track of all runtime errors
@@ -495,7 +495,7 @@ sub _throw_error
 
 #-----------------------------------------------------------------------------
 
-=item C<rethrow_error($error_ref)>
+=item B<rethrow_error($error_ref)>
 
 Throws an error for this object based on an error object associated with a different object
  
@@ -521,7 +521,7 @@ sub rethrow_error
 
 #-----------------------------------------------------------------------------
 
-=item C<throw_error([%args])>
+=item B<throw_error([%args])>
 
 Add a new error to this object instance, also adds the error to this Class list
 keeping track of all runtime errors
@@ -548,7 +548,7 @@ sub throw_error
 
 #-----------------------------------------------------------------------------
 
-=item C<throw_fatal($message, [$errorcode])>
+=item B<throw_fatal($message, [$errorcode])>
 
 Add a new error (type=fatal) to this object instance, also adds the error to this Class list
 keeping track of all runtime errors
@@ -568,7 +568,7 @@ sub throw_fatal
 
 #-----------------------------------------------------------------------------
 
-=item C<throw_nonfatal($message, [$errorcode])>
+=item B<throw_nonfatal($message, [$errorcode])>
 
 Add a new error (type=nonfatal) to this object instance, also adds the error to this Class list
 keeping track of all runtime errors
@@ -587,7 +587,7 @@ sub throw_nonfatal
 
 #-----------------------------------------------------------------------------
 
-=item C<throw_warning($message, [$errorcode])>
+=item B<throw_warning($message, [$errorcode])>
 
 Add a new error (type=warning) to this object instance, also adds the error to this Class list
 keeping track of all runtime errors
@@ -606,7 +606,7 @@ sub throw_warning
 
 #-----------------------------------------------------------------------------
 
-=item C<throw_note($message, [$errorcode])>
+=item B<throw_note($message, [$errorcode])>
 
 Add a new error (type=note) to this object instance, also adds the error to this Class list
 keeping track of all runtime errors
@@ -627,7 +627,7 @@ sub throw_note
 
 #-----------------------------------------------------------------------------
 
-=item C<last_error()>
+=item B<last_error()>
 
 Returns a hash containing the information from the last (worst case) error stored for this object
 i.e. if a 'fatal' error is followed by some 'note's then the 'fatal' error is returned
@@ -657,7 +657,7 @@ sub last_error
 
 #-----------------------------------------------------------------------------
 
-=item C<error()>
+=item B<error()>
 
 Returns a hash containing the information from the last actual error (i.e. only 'fatal' or 'nonfatal' types) stored for this object
 
@@ -699,7 +699,7 @@ sub error
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::ErrorHandle::_create_error()>
+=item B<_create_error()>
 
 Returns a hash containing the information from the last error stored for this object
 
@@ -730,7 +730,7 @@ sub _create_error
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::ErrorHandle::_cmp_error($err1, $err2)>
+=item B<_cmp_error($err1, $err2)>
 
 Compares error types. If the type of $err1 is more srious than $err2 then returns positive;
 if type $err1 is less serious than $err2 then returns negative; otherwise returns 0
@@ -759,7 +759,7 @@ sub _cmp_error
 
 #-----------------------------------------------------------------------------
 
-=item C<App::Framework::Base::Object::ErrorHandle::_latest_worst_error($errors_aref)>
+=item B<_latest_worst_error($errors_aref)>
 
 Works through the specified errors list and returns the latest, worst error
 

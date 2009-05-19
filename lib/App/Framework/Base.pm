@@ -13,6 +13,8 @@ use App::Framework::Base ;
 
 Base object for all application objects (core/extensions/features etc)
 
+B<DOCUMENTATION TO BE COMPLETED>
+
 =cut
 
 use strict ;
@@ -171,7 +173,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item C<expand_keys($hash_ref, $vars_aref)>
+=item B<expand_keys($hash_ref, $vars_aref)>
 
 Processes all of the HASH values, replacing any variables with their contents. The variable
 values are taken from the ARRAY ref I<$vars_aref>, which is an array of hashes. Each hash

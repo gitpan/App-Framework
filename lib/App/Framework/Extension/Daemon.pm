@@ -6,13 +6,16 @@ App::Framework::Daemon - Daemonize an application
 
 =head1 SYNOPSIS
 
-use App::Framework qw/Daemon/ ;
+  use App::Framework '::Daemon' ;
 
 
 =head1 DESCRIPTION
 
 App::Framework personality that provides a daemonized program (using Net::Server::Daemonize)
 
+B<DOCUMENTATION TO BE COMPLETED>
+
+B<BETA CODE ONLY - NOT TO BE USED IN PRODUCTION SCRIPTS>
 
 =cut
 
@@ -170,7 +173,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item B<<daemon_run()>>
+=item B<daemon_run()>
 
 Daemonize then run the application's app subroutine inside a loop.
  

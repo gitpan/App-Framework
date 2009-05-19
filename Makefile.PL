@@ -41,18 +41,20 @@ no_index       'directory'   => 'examples';
 ## create extra pod files
 sub MY::postamble {
 
-my $install = check_version() ;
-if ($install)
+my $rm_install = check_version() ;
+if ($rm_install)
 {
-	$install = 
+	$rm_install = 
 "
-install :: rm_oldinstall $install
+install :: rm_oldinstall 
+
+rm_oldinstall :: $rm_install
 	\$(NOECHO) \$(TOUCH) rm_oldinstall
 ";
 }
 else
 {
-	$install = "# null\n\n" ;
+	$rm_install = "# null\n\n" ;
 }
 
 my $modpod = '
@@ -63,7 +65,7 @@ modpod: pm_to_blib $(TO_INST_PM)
 	$(NOECHO) $(TOUCH) modpod
 ';
 
-"$install\n\n$modpod\n";
+"$rm_install\n\n$modpod\n";
 
 }
 

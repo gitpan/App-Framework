@@ -77,7 +77,7 @@ my %CLASS_INSTANCE ;
 # CONSTRUCTOR 
 #============================================================================================
 
-=item C<new([%args])>
+=item B<new([%args])>
 
 Create a new object.
 
@@ -139,7 +139,7 @@ sub new
 
 #-----------------------------------------------------------------------------
 
-=item C<init([%args])>
+=item B<init([%args])>
 
 Initialises the newly created object instance.
 
@@ -203,7 +203,7 @@ sub init
 
 #-----------------------------------------------------------------------------
 
-=item C<init_class([%args])>
+=item B<init_class([%args])>
 
 Initialises the object class variables.
 
@@ -275,7 +275,7 @@ prt_data(" init_class: class=$class FIELD_LIST=", \%FIELD_LIST) if $global_debug
 
 #-----------------------------------------------------------------------------
 
-=item C<add_fields($fields_href, $args_href)>
+=item B<add_fields($fields_href, $args_href)>
 
 Adds the contents of the HASH ref $fields_href to the args HASH ref ($args_href) under the key
 'fields'. Used by derived objects to add their fields to the parent object's fields.
@@ -298,7 +298,7 @@ sub add_fields
 
 #-----------------------------------------------------------------------------
 
-=item C<init_class_instance([%args])>
+=item B<init_class_instance([%args])>
 
 Initialises the object class variables. Creates a class instance so that these
 methods can also be called via the class (don't need a specific instance)
@@ -334,7 +334,7 @@ sub _field_list
 
 #----------------------------------------------------------------------------
 
-=item C<global_debug(level)>
+=item B<global_debug(level)>
 
 Set global debug print options to I<level>. 
 
@@ -360,7 +360,7 @@ sub global_debug
 
 #----------------------------------------------------------------------------
 
-=item C<global_verbose(level)>
+=item B<global_verbose(level)>
 
 Set global verbose print level to I<level>. 
 
@@ -386,7 +386,7 @@ sub global_verbose
 
 #----------------------------------------------------------------------------
 
-=item C<strict_fields($flag)>
+=item B<strict_fields($flag)>
 
 Enable/disable strict field checking
 
@@ -407,7 +407,7 @@ sub strict_fields
 
 #----------------------------------------------------------------------------
 
-=item C<class_instance([%args])>
+=item B<class_instance([%args])>
 
 Returns an object that can be used for class-based calls - object contains
 all the usual fields
@@ -437,7 +437,7 @@ sub class_instance
 
 #----------------------------------------------------------------------------
 
-=item C<has_class_instance()>
+=item B<has_class_instance()>
 
 Returns true if this class has a class instance object
  
@@ -455,7 +455,7 @@ sub has_class_instance
 
 #----------------------------------------------------------------------------
 
-=item C<allowed_class_instance()>
+=item B<allowed_class_instance()>
 
 Returns true if this class can have a class instance object
  
@@ -468,7 +468,7 @@ sub allowed_class_instance
 
 #----------------------------------------------------------------------------
 
-=item C<field_list()>
+=item B<field_list()>
 
 Returns hash of object's field definitions.
 
@@ -493,7 +493,7 @@ sub field_list
 
 #----------------------------------------------------------------------------
 
-=item C<debug(level)>
+=item B<debug(level)>
 
 Set debug print options to I<level>. 
 
@@ -532,7 +532,7 @@ sub debug
 
 #----------------------------------------------------------------------------
 
-=item C<verbose(level)>
+=item B<verbose(level)>
 
 Set verbose print level to I<level>. 
 
@@ -570,7 +570,7 @@ sub verbose
 
 #----------------------------------------------------------------------------
 
-=item C<set(%args)>
+=item B<set(%args)>
 
 Set one or more settable parameter.
 
@@ -636,7 +636,7 @@ sub set
 
 #----------------------------------------------------------------------------
 
-=item C<vars([@names])>
+=item B<vars([@names])>
 
 Returns hash of object's fields (i.e. field name => field value pairs).
 
@@ -686,7 +686,7 @@ sub vars
 
 #----------------------------------------------------------------------------
 
-=item C<DESTROY()>
+=item B<DESTROY()>
 
 Destroy object
 
@@ -705,7 +705,7 @@ sub DESTROY
 
 #----------------------------------------------------------------------------
 
-=item C<check_instance()>
+=item B<check_instance()>
 
 If this is not an instance (i.e. a class call), then if there is a class_instance
 defined use it, otherwise error.
@@ -737,7 +737,7 @@ sub check_instance
 
 #----------------------------------------------------------------------------
 
-=item C<copy_attributes($target)>
+=item B<copy_attributes($target)>
 
 Transfers all the supported attributes from $this object to $target object.
 
@@ -769,7 +769,7 @@ sub copy_attributes
 
 #----------------------------------------------------------------------------
 
-=item C<class()>
+=item B<class()>
 
 Returns name of object class.
 
@@ -786,7 +786,7 @@ sub class
 
 #----------------------------------------------------------------------------
 
-=item C<clone()>
+=item B<clone()>
 
 Create a copy of this object and return the copy.
 
@@ -813,7 +813,7 @@ sub clone
 
 #----------------------------------------------------------------------------
 
-=item C<quote_str($str)>
+=item B<quote_str($str)>
 
 Returns a quoted version of the string.
  
@@ -842,7 +842,7 @@ sub quote_str
 
 #----------------------------------------------------------------------------
 
-=item C<expand_vars($string, \%vars)>
+=item B<expand_vars($string, \%vars)>
 
 Work through string expanding any variables, replacing them with the value stored in the %vars hash.
 If variable is not stored in %vars, then that variable is left.
@@ -879,7 +879,7 @@ sub expand_vars
 
 #---------------------------------------------------------------------
 
-=item C<prt_data(@args)>
+=item B<prt_data(@args)>
 
 Use App::Framework::Base::Object::DumpObj to print out variable information. Automatically enables
 object print out
@@ -897,7 +897,7 @@ sub prt_data
 
 #----------------------------------------------------------------------------
 #
-#=item C<_dbg_prt($items_aref [, $min_debug])>
+#=item B<_dbg_prt($items_aref [, $min_debug])>
 #
 #Print out the items in the $items_aref ARRAY ref iff the calling object's debug level is >0. 
 #If $min_debug is specified, will only print out items if the calling object's debug level is >= $min_debug.
@@ -927,7 +927,7 @@ sub _dbg_prt
 
 #---------------------------------------------------------------------
 
-=item C<dump_callstack()>
+=item B<dump_callstack()>
 
 Print out the call stack. Useful for debug output at a crash site. 
 =cut

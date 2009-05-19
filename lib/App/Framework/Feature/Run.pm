@@ -6,12 +6,14 @@ App::Framework::Feature::Run - Execute external commands
 
 =head1 SYNOPSIS
 
-use App::Framework::Feature::Run ;
+  use App::Framework '+Run' ;
 
 
 =head1 DESCRIPTION
 
 An application feature (see L<App::Framework::Feature>) that provides for external command running from within an application.
+
+B<DOCUMENTATION TO BE COMPLETED>
 
 
 =cut
@@ -125,7 +127,7 @@ my %FIELDS = (
 
 #============================================================================================
 
-=item C<< App::Framework::Feature::Run->new([%args]) >>
+=item B<new([%args])>
 
 Create a new Run.
 
@@ -162,7 +164,7 @@ sub new
 
 #-----------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->init_class([%args]) >>
+=item B<init_class([%args])>
 
 Initialises the Run object class variables.
 
@@ -195,7 +197,7 @@ sub init_class
 
 #-----------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature->access([%args]) >>
+=item B<App::Framework::Feature->access([%args])>
 
 Provides access to the feature. Operates in two modes:
 
@@ -215,7 +217,7 @@ sub access
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->run([%args]) >>
+=item B<run([%args])>
 
 Execute a command, return exit status (0=success)
 
@@ -286,7 +288,7 @@ $this->prt_data("run() args=", \%args) if $this->debug() ;
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->run_results([%args]) >>
+=item B<run_results([%args])>
 
 Execute a command, return output lines
 
@@ -305,7 +307,7 @@ sub run_results
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->run_cmd($cmd, [%args]) >>
+=item B<run_cmd($cmd, [%args])>
 
 Execute a specified command, return exit status (0=success)
 
@@ -321,7 +323,7 @@ sub run_cmd
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->run_cmd_results($cmd, [%args]) >>
+=item B<run_cmd_results($cmd, [%args])>
 
 Execute a specified command, return output lines
 
@@ -339,7 +341,7 @@ sub run_cmd_results
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->clear_args() >>
+=item B<clear_args()>
 
 Clear out command args (ready for calls of the add_args method)
 
@@ -356,7 +358,7 @@ sub clear_args
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->add_args($args) >>
+=item B<add_args($args)>
 
 Add arguments from parameter $args.
 
@@ -387,7 +389,7 @@ $this->throw_fatal("Method not implemented") ;
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->check_args() >>
+=item B<check_args()>
 
 Ensure arguments are correct
 
@@ -410,7 +412,7 @@ sub check_args
 
 #--------------------------------------------------------------------------------------------
 
-=item C<< App::Framework::Feature::Run->print_run([%args]) >>
+=item B<print_run([%args])>
 
 Display the full command line as if it was going to be run
 

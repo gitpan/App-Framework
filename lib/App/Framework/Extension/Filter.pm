@@ -6,55 +6,16 @@ App::Framework::Extension::Filter - Script filter application object
 
 =head1 SYNOPSIS
 
-use App::Framework::Extension::Filter ;
+  use App::Framework '::Filter' ;
 
 
 =head1 DESCRIPTION
 
 Application that filters either a file or a directory to produce some other output
 
+B<DOCUMENTATION TO BE COMPLETED>
 
-* app_start - allows hash setup
-* app_end - allows file creation/tweak
-* app
-** return output line?
-** HASH state auto- updated with:
-*** all output lines (so far)
-*** regexp match vars (under 'vars' ?)
-** app sets HASH 'output' to tell filter what to output (allows multi-line?)
-* options
-** inplace - buffers up lines then overwrites (input) file
-** dir - output to dir
-** input file wildcards
-** recurse - does recursive file find (ignore .cvs .svn)
-** output - can spec filename template ($name.ext)
-
-* Filtering feature
-** All extra loading of filter submodules
-** Feature options: +Filter(perl c) - specifies extra Filter::Perl, Filter::C modules
-* Filter spec:
-
-	(
-		('<spec>', <flags>, <code>),
-		('<spec>', <flags>, <code>),
-		('<spec>', <flags>, <code>),
-	)
-
-Each entry perfomed on the line, move on to next entry if no match OR match and (flags & FILTER_CONTINUE) [default]
-Calls <code> on match AND (flags & FILTER_CALL); calls app if no <code> specified
-Flag bitmasks:
-	FILTER_CONTINUE		- allows next entry to be processed if matches; normally stops
-	FILTER_CALL			- call code on match
-	
-<spec> is of the form:
-
-	[<cond>:]/<regexp>/[:<setvars>]
-
-<cond> evaluatable condition that must be met before running the regexp. Variables can be used by name 
-(names are converted to $state->{'vars'}{name})
-
-<stevars> colon separated list of variable assignments evaluated on match. Variables used by name (as <cond>). Regexp matches
-accessed by $n or \n
+B<BETA CODE ONLY - NOT TO BE USED IN PRODUCTION SCRIPTS>
 
 
 =cut
@@ -144,7 +105,7 @@ my %FIELDS = (
 
 #============================================================================================
 
-=item C<new([%args])>
+=item B<new([%args])>
 
 Create a new App::Framework::Extension::Filter.
 
@@ -252,7 +213,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item B<<filter_run($app, $opts_href, $args_href)>>
+=item B<filter_run($app, $opts_href, $args_href)>
 
 Filter the specified file(s) one at a time.
  
@@ -346,7 +307,7 @@ print "#!# Hello, Ive started filter_run()...\n" if $this->debug ;
 
 #----------------------------------------------------------------------------
 
-=item B<<_start_output($state_href, $opts_href)>>
+=item B<_start_output($state_href, $opts_href)>
 
 Start of output file
  
@@ -374,7 +335,7 @@ print " + not buffering\n" if $this->debug ;
 
 #----------------------------------------------------------------------------
 
-=item B<<_handle_output($state_href, $opts_href)>>
+=item B<_handle_output($state_href, $opts_href)>
 
 Write out line (if required)
  
@@ -399,7 +360,7 @@ sub _handle_output
 
 #----------------------------------------------------------------------------
 
-=item B<<_end_output($state_href, $opts_href)>>
+=item B<_end_output($state_href, $opts_href)>
 
 End of output file
  
@@ -431,7 +392,7 @@ sub _end_output
 
 #----------------------------------------------------------------------------
 
-=item B<<_open_output($state_href, $opts_href)>>
+=item B<_open_output($state_href, $opts_href)>
 
 Open the file (or STDOUT) depending on settings
  
@@ -502,7 +463,7 @@ print " + outfile=$outfile: dir=$dir fmt=$fmt file=$file num=$number base=$base 
 
 #----------------------------------------------------------------------------
 
-=item B<<_close_output($state_href, $opts_href)>>
+=item B<_close_output($state_href, $opts_href)>
 
 Close the file if open
  
@@ -529,7 +490,7 @@ sub _close_output
 
 #----------------------------------------------------------------------------
 
-=item B<<_wr_output($state_href, $opts_href, $line)>>
+=item B<_wr_output($state_href, $opts_href, $line)>
 
 End of output file
  
@@ -574,4 +535,47 @@ None that I know of!
 
 __END__
 
+
+
+* app_start - allows hash setup
+* app_end - allows file creation/tweak
+* app
+** return output line?
+** HASH state auto- updated with:
+*** all output lines (so far)
+*** regexp match vars (under 'vars' ?)
+** app sets HASH 'output' to tell filter what to output (allows multi-line?)
+* options
+** inplace - buffers up lines then overwrites (input) file
+** dir - output to dir
+** input file wildcards
+** recurse - does recursive file find (ignore .cvs .svn)
+** output - can spec filename template ($name.ext)
+
+* Filtering feature
+** All extra loading of filter submodules
+** Feature options: +Filter(perl c) - specifies extra Filter::Perl, Filter::C modules
+* Filter spec:
+
+	(
+		('<spec>', <flags>, <code>),
+		('<spec>', <flags>, <code>),
+		('<spec>', <flags>, <code>),
+	)
+
+Each entry perfomed on the line, move on to next entry if no match OR match and (flags & FILTER_CONTINUE) [default]
+Calls <code> on match AND (flags & FILTER_CALL); calls app if no <code> specified
+Flag bitmasks:
+	FILTER_CONTINUE		- allows next entry to be processed if matches; normally stops
+	FILTER_CALL			- call code on match
+	
+<spec> is of the form:
+
+	[<cond>:]/<regexp>/[:<setvars>]
+
+<cond> evaluatable condition that must be met before running the regexp. Variables can be used by name 
+(names are converted to $state->{'vars'}{name})
+
+<stevars> colon separated list of variable assignments evaluated on match. Variables used by name (as <cond>). Regexp matches
+accessed by $n or \n
 

@@ -90,7 +90,7 @@ my %excludes ;
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<debug($level)>
+=item B<debug($level)>
 
 Set debug print options to B<$level>. 
 
@@ -116,7 +116,7 @@ sub debug
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<verbose($level)>
+=item B<verbose($level)>
 
 Set vebose print options to B<$level>. 
 
@@ -142,7 +142,7 @@ sub verbose
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<print_objects_flag($flag)>
+=item B<print_objects_flag($flag)>
 
 Set option for printing out objects to B<$flag>. 
 
@@ -168,7 +168,7 @@ sub print_objects_flag
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<quote_vals_flag($flag)>
+=item B<quote_vals_flag($flag)>
 
 Set option quoting the values to B<$flag>. 
 
@@ -195,7 +195,7 @@ sub quote_vals_flag
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<exclude(@list)>
+=item B<exclude(@list)>
 
 Set the list of excluded HASH keys. Any keys in a HASH that match the name(s) in the list will not be
 displayed.
@@ -216,7 +216,7 @@ sub exclude
 
 #---------------------------------------------------------------------------------------------------
 
-=item C<prefix($prefix)>
+=item B<prefix($prefix)>
 
 Prefix all output lines with B<$prefix>
 
@@ -242,7 +242,7 @@ sub prefix
 
 #---------------------------------------------------------------------
 
-=item C<prtstr_data(@list)>
+=item B<prtstr_data(@list)>
 
 Create a multiline string of all items in the list. Handles scalars, hashes (as an array),
 arrays, ref to scalar, ref to hash, ref to array, object.
@@ -274,7 +274,7 @@ sub prtstr_data
 
 #---------------------------------------------------------------------
 
-=item C<prt_data(@list)>
+=item B<prt_data(@list)>
 
 Print out each item in the list. Handles scalars, hashes (as an array),
 arrays, ref to scalar, ref to hash, ref to array, object.

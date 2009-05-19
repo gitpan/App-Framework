@@ -169,13 +169,42 @@ This allows sysadmins to set up a common set of settings.
 Uses L<App::Framework::Base::SearchPath> to provide the path search. 
 
 
-=head2 Writing
+=head2 Creating Config Files
 
-?????????
+You can, of course, just write your config files from scratch. Alternatively, if you predominantly use "global" settings, then you specify
+them as application options (L<App::Framework::Feature::Options>). Run your script with '-config_write' and it will automatically create 
+a formatted configuration file (see L</ADDITIONAL COMMAND LINE OPTIONS> for other command line settings). 
 
 =head2 Addtional Config Instances
 
-????
+In addition to having the application tied in with it's own configuration file, you can create multiple extra configuration files and read/write
+then using this feature. To do this, create a new App::Framework::Feature::Config object instance per configuration file. You can then access
+the contents of the file using the object's methods.
+
+For example:
+
+    sub app
+    {
+        my ($app, $opts_href, $args_href) = @_ ;
+     
+        ## use application config object to create a new one
+        my $new_cfg = $app->feature('Config')->new(
+            'filename'        => 'some_file.conf',
+            'path'            => '$HOME,/etc/new_config',
+            'write_path'    => '$HOME',
+        ) ;
+        $new_cfg->read() ;
+    
+        # do stuff with configuration
+        ...
+     
+        # (debug) show configuration
+        $app->prt_data("Readback config=", $new_cfg->config) ;
+         
+        ## write out file
+        $new_cfg->write() ;
+    }
+
 
 =head2 Raw Configuration HASH
 
@@ -433,7 +462,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item C<set(%args)>
+=item B<set(%args)>
 
 Overrides the parent 'set()' method to send the parameters off to the L<App::Framework::Base::SearchPath> object
 as well as itself.
