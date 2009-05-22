@@ -1,6 +1,9 @@
 Changes
 examples/eg1.pl
 examples/eg2.pl
+examples/fprofpp-filter.pl
+examples/eg-sql.pl
+examples/app_doxy.pl
 inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm

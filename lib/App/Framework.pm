@@ -281,20 +281,119 @@ The framework looks for these 3 functions to be defined in the script file. The 
 
 =head3 Setup
 
-B<DOCUMENTATION FOR THIS SECTION TO BE COMPLETED>
+The application settings are entered into the __DATA__ section at the end of the file. All program settings are grouped under sections which are introduced by '[section]' style headings. There are many 
+different settings that can be set using this mechanism, but the framework sets most of them to useful defaults. The most common sections are described below.
+
+=head4 Summary
+
+This should be a single line, concise summary of what the script does. It's used in the terse man page created by pod2man.
+
+=head4 Description
+
+As you'd expect, this should be a full description, user-guide etc. on what the script does and how to do it. Notice that this example
+has used one (of many) of the variables available: $name (which expands to the script name, without any path or extension).
+
+=head4 Options
+
+Command line options are defined in this section in the format:
+
+    -<name>=<specification>    <Summary>    <optional default setting>
+    
+    <Description> 
+
+For example:
+
+    -table|tbl|sql_table=s        Table [default=listings2]
+
+For full details, see L<App::Framework::Feature::Options>.
+
+=head4 Arguments
+
+The command line arguments specification are similar to the options specification. In this case we use '*' to signify the
+start of a new argument definition. 
+
+Arguments are defined in the format:
+
+    * <name>=<specification>    <Summary>    <optional default setting>
+    
+    <Description> 
+
+For full details, see L<App::Framework::Feature::Args>.
+
+=head4 Example
+
+An example script setup is:
+
+    __DATA__
+    
+    [SUMMARY]
+    
+    An example of using the application framework
+    
+    [ARGS]
+    
+    * infile=f        Input file
+    
+    Should be set to the input file
+    
+    * indir=d        Input dir
+    
+    Should be set to the input dir
+    
+    [OPTIONS]
+    
+    -table=s        Table [default=listings2]
+    
+    Sql table name
+    
+    -database=s        Database [default=tvguide]
+    
+    Sql database name
+    
+    
+    [DESCRIPTION]
+    
+    B<$name> is an example script.
+
 
 
 =head3 Data
 
-B<DOCUMENTATION FOR THIS SECTION TO BE COMPLETED>
+After the settings (described above), one or more extra data areas can be created by starting that area with a new __DATA__ line.
+
+If the new data area is defined simply with '__DATA__' then the area is automatically named as 'data1', 'data2' etc. Alternatively, the 
+data section can be arbitrarily named by appending a text name after __DATA__. For example, the definition:
+
+	__DATA__
+	
+	[DESCRIPTION]
+	An example
+	
+	__DATA__ test.txt
+	
+	some text
+	
+	__DATA__ a_bit_of_sql.sql
+	
+	DROP TABLE IF EXISTS `listings2`;
+	 
+Creates 2 extra data areas 'test.txt' and 'a_bit_of_sql.sql'. These data area contents can be accessed using:
+
+	my $contents1 = $app->data('text.txt') ;
+	# or
+	$contents1 = $app->data('data1') ;
+
+	my $contents2 = $app->data('a_bit_of_sql.sql') ;
+	# or
+	$contents2 = $app->data('data2') ;
+
 
 See L<App::Framework::Feature::Data> for further details.
 
+
 =head2 Directories
 
-B<DOCUMENTATION FOR THIS SECTION TO BE COMPLETED>
-
-
+The framework sets up various directory paths automatically, as described below.
 
 =head3 @INC path
 
@@ -305,7 +404,19 @@ an actually Perl file is found. The @INC array has the following added:
 	* $progpath
 	* $progpath/lib
 	
-i.e. The directory that the Perl file resides in, and a sub-directory 'lib' will be searched for application-specific modules.
+i.e. The directory that the script resides in, and a sub-directory 'lib' will be searched for application-specific modules.
+
+Note that this is the path also used when the framework loads in the core personality, and any optional extensions.
+
+=head3 Feature modules
+
+When the application framework loads in the various required and user-specified features, then it attempts to load the following feature modules until one is sucessfully loaded:
+
+    * App::Framework::Feature::${personality}::${feature}
+    * App::Framework::Feature::${feature}
+
+Where ${feature} is the name of the feature being loaded (e.g. Config), and ${personality} is the specified core personality (e.g. Script). Note that it does this using the L</@INC path>, so
+an application can bundle it's own feature's in under it's own install directory.
 
 
 =head2 Settings
@@ -354,7 +465,7 @@ use Carp ;
 use App::Framework::Core ;
 
 
-our $VERSION = "0.92" ;
+our $VERSION = "0.93" ;
 
 
 #============================================================================================

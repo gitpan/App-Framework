@@ -442,9 +442,26 @@ For further details see L<App::Framework::Feature::Data>
 
 =head3 Configurations
 
-B<THIS SECTION TO BE COMPLETED>
+A configuration file may be used to provide all of the application's option settings, rather than supplying them at the command line. The default setup of the Config feature
+is to attempt to read the configuration file named ${name}.conf (where ${name} is the script name). The framework, by default, will search for this file in three directories depending
+on operating system. For example, a script 'test_script' will look for it's configuration file on Linux in:
 
-For further details see L<App::Framework::Feature::Config>
+    $HOME/.test_script
+    /etc/test_script
+    /usr/local/bin/config 
+
+The configuration file contents, at simplest, are just variable=value pairs with optional descriptive comments. For example:
+
+    # Server port number
+    port = 32023
+    
+    # stay alive tick interval
+    tick = 5
+    
+    # log
+    logfile = /tmp/ate_snmp.log
+
+For further details, and more advanced configurations, see L<App::Framework::Feature::Config>
 
 
 =head3 Running external programs

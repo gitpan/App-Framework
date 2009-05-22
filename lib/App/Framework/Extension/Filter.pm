@@ -23,7 +23,7 @@ B<BETA CODE ONLY - NOT TO BE USED IN PRODUCTION SCRIPTS>
 use strict ;
 use Carp ;
 
-our $VERSION = "1.000" ;
+our $VERSION = "1.001" ;
 
 
 
@@ -54,10 +54,10 @@ my @OPTIONS = (
 	['trim_space',			'Trim spaces',		'Remove spaces from start/end of line', ],
 	['trim_comment',		'Trim comments',	'Remove comments from line'],
 	['inplace',				'In-place filter',	'Read file, process, then overwrite input file'],
-	['outfile',				'Write to file',	'Write filtered output to a file (rather than STDOUT)'],
+#	['outfile',				'Write to file',	'Write filtered output to a file (rather than STDOUT)'],
 	['outdir=s',			'Output directory',	'Write files into specified directory (rather than into same directory as input file)'],
-	['outfmt=s',			'Output filename',	'Specify the output filename which may include variables', '$base.txt'],
-	['comment=s@',			'Comment',			'Specify the comment start (end) string', '#'],
+	['outfile=s',			'Output filename',	'Specify the output filename which may include variables'],
+	['comment=s',			'Comment',			'Specify the comment start string', '#'],
 ) ;
 
 # Arguments spec
@@ -85,12 +85,15 @@ my %FIELDS = (
 	'comment'		=> ['#'],
 	'buffer'		=> 0,
 	'inplace'		=> 0,
-	'outfmt'		=> '$base.txt',
-	'outfile'		=> 0,
+#	'outfmt'		=> '$base.txt',
+	'outfile'		=> undef,
 	'outdir'		=> undef,
 	
 	## internal
 	'out_fh'		=> undef,
+	
+	'_filter_state'		=> {},
+	'_filter_opts'			=> undef,
 ) ;
 
 #============================================================================================
@@ -125,7 +128,7 @@ sub new
 
 	my $class = ref($obj) || $obj ;
 
-print "App::Framework::Extension::Filter->new() class=$class\n" if $class_debug ;
+#print "App::Framework::Extension::Filter->new() class=$class\n" if $class_debug ;
 
 #	# Create object
 #	my $this = $class->SUPER::new(
@@ -136,7 +139,7 @@ print "App::Framework::Extension::Filter->new() class=$class\n" if $class_debug 
 	my $this = App::Framework::Core->inherit($class, %args) ;
 
 
-print "Filter - $class ISA=@ISA\n" if $class_debug ;
+#print "Filter - $class ISA=@ISA\n" if $class_debug ;
 
 	## Set options
 	$this->feature('Options')->append_options(\@OPTIONS) ;
@@ -146,19 +149,15 @@ print "Filter - $class ISA=@ISA\n" if $class_debug ;
 
 	## Set args
 	$this->feature('Args')->append_args(\@ARGS) ;
+
+#$this->debug(2) ;
 	
-
-#my $filter_sub = sub {$this->filter_run(@_);} ;
-#print "Filter - extending fn = $filter_sub\n" ;
-
 	## hi-jack the app function
 	$this->extend_fn(
 		'app_fn'		=> sub {$this->filter_run(@_);},
+		'app_start_fn'		=> sub {$this->_filter_start(@_);},
+		'app_end_fn'		=> sub {$this->_filter_end(@_);},
 	) ;
-
-$this->prt_data("new filter args=", \%args) if $class_debug ;
-print "App::Framework::Extension::Filter->new() - END\n" if $class_debug ;
-#$this->debug(2) ;
 
 	return($this) ;
 }
@@ -225,23 +224,23 @@ sub filter_run
 	my $this = shift ;
 	my ($app, $opts_href, $args_href) = @_ ;
 
+	## save for later
+	$this->_filter_opts($opts_href) ;
+	
 	# Get command line arguments
-#	my @args = $this->args() ;
 	my @args = @{ $args_href->{'file'} || [] } ;
 
 	$this->_dispatch_entry_features(@_) ;
 
 #$this->debug(2) ;
 
-print "#!# Hello, Ive started filter_run()...\n" if $this->debug ;
+$this->_dbg_prt(["#!# Hello, Ive started filter_run()...\n"]) ;
 
 	## Update from options
 	$this->feature('Options')->obj_vars($this, [keys %FIELDS]) ;
 
-#$app->prt_data("Filter=", $this) if $this->debug ;
-
 	## Set up filter state
-	my $state_href = {} ;
+	my $state_href = $this->_filter_state ;
 	$state_href->{num_files} = scalar(@args) ;
 	$state_href->{file_number} = 1 ;
 	$state_href->{file_list} = \@args ;
@@ -300,6 +299,47 @@ print "#!# Hello, Ive started filter_run()...\n" if $this->debug ;
 }
 
 
+#----------------------------------------------------------------------------
+# start
+sub _filter_start
+{
+	my $this = shift ;
+	my ($app, $opts_href, @args) = @_ ;
+
+	## Do nothing
+
+}
+
+#----------------------------------------------------------------------------
+# end
+sub _filter_end
+{
+	my $this = shift ;
+	my ($app, $opts_href, @args) = @_ ;
+
+	## Do nothing
+}
+
+#----------------------------------------------------------------------------
+
+=item B<write_output($output)>
+
+Application interface for writing out extra lines
+ 
+=cut
+
+
+sub write_output
+{
+	my $this = shift ;
+	my ($output) = @_ ;
+	
+	my $state_href = $this->_filter_state ;
+	$state_href->{'output'} = $output ;
+	
+	$this->_handle_output($state_href, $this->_filter_opts) ;
+}
+
 
 # ============================================================================================
 # PRIVATE METHODS
@@ -321,12 +361,12 @@ sub _start_output
 
 	$this->set('out_fh' => undef) ;
 
-print "_start_output\n" if $this->debug ;
+$this->_dbg_prt(["_start_output\n"]) ;
 	
 	## do nothing if buffering or in-place editing
 	return if ($this->buffer || $this->inplace) ;
 
-print " + not buffering\n" if $this->debug ;
+$this->_dbg_prt([" + not buffering\n"]) ;
 
 	# open output file (and set up output dir)
 	$this->_open_output($state_href, $opts_href) ;
@@ -348,13 +388,17 @@ sub _handle_output
 	my ($state_href, $opts_href) = @_ ;
 
 	## buffer line(s)
-	push @{$state_href->{output_lines}}, $state_href->{output} if defined($state_href->{output}) ;
+	my $out = $state_href->{output} ;
+$this->_dbg_prt(["_handle_output : output=", $out, "\n"]) ;
+	push @{$state_href->{output_lines}}, $out if defined($out) ;
 
 	## do nothing if buffering or in-place editing
 	return if ($this->buffer || $this->inplace) ;
 
+$this->_dbg_prt([" + not buffering\n"]) ;
+
 	## ok to write
-	$this->_wr_output($state_href, $opts_href, $state_href->{output}) ;
+	$this->_wr_output($state_href, $opts_href, $out) if defined($out)  ;
 }
 
 
@@ -372,9 +416,13 @@ sub _end_output
 	my $this = shift ;
 	my ($state_href, $opts_href) = @_ ;
 
+$this->_dbg_prt(["_end_output : buffer=", $this->buffer, ", inplace=", $this->inplace, ", # lines=", scalar(@{$state_href->{output_lines}}),"\n"]) ;
+
 	## if buffering or in-place editing, now need to write file
 	if ($this->buffer || $this->inplace)
 	{
+$this->_dbg_prt([" + writing\n"]) ;
+
 		# open output file (and set up output dir)
 		$this->_open_output($state_href, $opts_href) ;
 
@@ -406,7 +454,7 @@ sub _open_output
 
 	$this->set('out_fh' => undef) ;
 
-print "_open_output\n" if $this->debug ;
+$this->_dbg_prt(["_open_output\n"]) ;
 	
 	my $outfile ;
 	if ($this->outfile)
@@ -419,7 +467,7 @@ print "_open_output\n" if $this->debug ;
 			mkpath([$dir], $this->debug, 0755) ;
 		}
 		$dir ||= '.' ;
-		my $fmt = $this->outfmt ;
+		my $fmt = $this->outfile ;
 		
 		my $file = $state_href->{file} ;
 		my $number = $state_href->{file_number} ;
@@ -427,8 +475,8 @@ print "_open_output\n" if $this->debug ;
 		my $name = $base ;
 		
 		eval "\$outfile = \"$fmt\"" ;
-print " + eval=$@\n" if $this->debug ;
-print " + outfile=$outfile: dir=$dir fmt=$fmt file=$file num=$number base=$base path=$path\n" if $this->debug ;
+$this->_dbg_prt([" + eval=$@\n"]) ;
+$this->_dbg_prt([" + outfile=$outfile: dir=$dir fmt=$fmt file=$file num=$number base=$base path=$path\n"]) ;
 		
 		$outfile = File::Spec->catfile($dir, $outfile) ;
 		$outfile = File::Spec->rel2abs($outfile) ;
@@ -504,7 +552,7 @@ sub _wr_output
 
 	my $fh = $this->out_fh ;
 
-print "_wr_output($line) fh=$fh\n" if $this->debug ;
+$this->_dbg_prt(["_wr_output($line) fh=$fh\n"]) ;
 	if ($fh)
 	{
 		print $fh "$line\n" ;

@@ -11,9 +11,40 @@ App::Framework::Feature::Run - Execute external commands
 
 =head1 DESCRIPTION
 
-An application feature (see L<App::Framework::Feature>) that provides for external command running from within an application.
+Provides for external command running from within an application.
 
 B<DOCUMENTATION TO BE COMPLETED>
+
+=head2 Arguments
+
+=head2 Return code
+
+=head2 Command output
+
+=head2 Timeout
+
+=head2 Callbacks
+
+
+=head2 Examples
+
+	$app->run(
+		'cmd' 		=> "perl t/test/runtest.pl", 
+	) ;
+	
+	$app->run(
+		'cmd' 		=> "perl t/test/runtest.pl", 
+		'progress'	=> \&progress,
+	) ;
+	
+	my $sleep = 10 ;
+	$expected = \@data ;
+	$delay = $sleep ;
+	$run->run_cmd("perl t/test/runtest.pl", 
+		'progress'	=> \&progress,
+		'args'		=> "ping $sleep",
+		'timeout'	=> $sleep,
+	) ;
 
 
 =cut
@@ -197,7 +228,7 @@ sub init_class
 
 #-----------------------------------------------------------------------------
 
-=item B<App::Framework::Feature->access([%args])>
+=item B<access([%args])>
 
 Provides access to the feature. Operates in two modes:
 

@@ -1,8 +1,12 @@
 Revision history for App-Framework
 
+0.93    Fri May 22 14:04:00 2009
+		Optimised debug & verbose methods in Object (was slugging apps)
+		Corrected Extension & Filter modules
+		Updated some more POD
+
 0.92    Tue May 18 12:30:00 2009
 		Tweak to Makefile to correct removal of old installation
-		
 
 0.91    Tue May 18 08:07:00 2009
 		MANIFEST corrections

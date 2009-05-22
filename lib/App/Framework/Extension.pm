@@ -84,7 +84,7 @@ sub new
 	## Inherit from specified list
 	my $this = App::Framework::Core->inherit($class, %args) ;
 
-print "Extension - $class ISA=@ISA\n" if $this->debug ;
+$this->_dbg_prt(["Extension - $class ISA=@ISA\n"]) ;
 
 	# Create object
 #	my $this = $class->SUPER::new(%args) ;
@@ -169,7 +169,7 @@ sub heap
 
 	# Return this package's area
 	$heap->{$pkg} ||= {} ;
-#$this->prt_data("#!# this=$this pkg=$pkg Heap [$heap->{$pkg}] Total heap [$heap]=", $heap) ;	
+$this->_dbg_prt(["#!# this=$this pkg=$pkg Heap [$heap->{$pkg}] Total heap [$heap]=", $heap]) ; ;	
 
 	return $heap->{$pkg} ;
 }
@@ -195,28 +195,28 @@ sub extend_fn
 	my (%spec) = @_ ;
 
 #$this->debug(2);
-#my $pkg = (caller(0))[0] ;
-#$this->prt_data("#!# extend_fn() pkg=$pkg (this=$this)", \%spec) if $this->debug ;	
+my $pkg = (caller(0))[0] ;
+$this->_dbg_prt(["#!# extend_fn() pkg=$pkg (this=$this)", \%spec]) ; ;	
 	
 	my $heap = $this->heap(1) ;
-#$this->prt_data("#!# heap [$heap]", $heap) if $this->debug ;	
+$this->_dbg_prt(["#!# heap [$heap]", $heap]) ; ;	
 	foreach my $fn (keys %spec)
 	{
 		# save original
 		$heap->{'extend_fn'}{$fn} = $this->$fn ;
-#print "#!# + pkg=$pkg Extend $fn - saved ($heap->{'extend_fn'}{$fn}), new $fn=($spec{$fn})\n" if $this->debug ;
+$this->_dbg_prt(["#!# + pkg=$pkg Extend $fn - saved ($heap->{'extend_fn'}{$fn}), new $fn=($spec{$fn})\n"]) ;
 		
 		# update function
 		$this->$fn($spec{$fn}) ;
 		
 	}
-#$this->prt_data("#!# extend_fn() - END", "HEAP=", $heap) if $this->debug ;	
+$this->_dbg_prt(["#!# extend_fn() - END", "HEAP=", $heap]) ; ;	
 
 }
 
 #----------------------------------------------------------------------------
 
-=item B<call_extend_fn($pkg, $fn, @args)>
+=item B<call_extend_fn($fn, @args)>
 
 Calls the function with specified args. If not extended by the extension then just calls the
 default function.
@@ -236,12 +236,12 @@ sub call_extend_fn
 	my $heap = $this->heap(1) ;
 	my $call = $heap->{'extend_fn'}{$fn} ;
 #$this->debug(2);
-#my $pkg = (caller(0))[0] ;
-#$this->prt_data("#!# pkg=$pkg call_extend_fn($fn) call=$call HEAP [$heap]=", $heap) if $this->debug ;	
+my $pkg = (caller(0))[0] ;
+$this->_dbg_prt(["#!# pkg=$pkg call_extend_fn($fn) call=$call HEAP [$heap]=", $heap]) ; ;	
 
 	# get default if not extended
-	$call ||= $this->$fn ;
-#print "#!# + pkg=$pkg call=$call\n" if $this->debug ;	
+##	$call ||= $this->$fn ;
+$this->_dbg_prt(["#!# + pkg=$pkg call=$call\n"]) ;	
 	
 	# do call if specified
 	if ($call)
@@ -249,7 +249,7 @@ sub call_extend_fn
 		# get options
 		my %options = $this->options() ;
 
-#print "#!# + pkg=$pkg calling $fn call=$call\n" if $this->debug ;	
+$this->_dbg_prt(["#!# + pkg=$pkg calling $fn call=$call\n"]) ;	
 	
 		# do call
 		&$call($this, \%options, @args) ;

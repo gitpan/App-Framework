@@ -34,7 +34,7 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "1.007" ;
+our $VERSION = "1.009" ;
 our $AUTOLOAD ;
 
 #============================================================================================
@@ -59,19 +59,21 @@ my @SPECIAL_FIELDS = qw/
 my %COMMON_FIELDS = (
 	'debug'			=> undef,		# pseudo field
 	'verbose'		=> undef,		# pseudo field
-	'debug_level'	=> 0,
-	'verbose_level'	=> 0,
-	'debug_pkg'		=> '',
-	'verbose_pkg'	=> '',
+#	'debug_level'	=> 0,
+#	'verbose_level'	=> 0,
+#	'debug_pkg'		=> '',
+#	'verbose_pkg'	=> '',
 ) ;
 
 # Constant
 #my @REQ_LIST ;
 my %FIELD_LIST ;
 
-
 my %CLASS_INIT;
 my %CLASS_INSTANCE ;
+
+my %DEBUG ;
+my %VERBOSE ;
 
 #============================================================================================
 # CONSTRUCTOR 
@@ -493,14 +495,14 @@ sub field_list
 
 #----------------------------------------------------------------------------
 
-=item B<debug(level)>
+=item B<debug_new(level)>
 
 Set debug print options to I<level>. 
 
 
 =cut
 
-sub debug
+sub debug_new
 {
 	my $this = shift ;
 	my ($level) = @_ ;
@@ -529,10 +531,33 @@ sub debug
 	return $debug_level ;
 }
 
+#----------------------------------------------------------------------------
+
+=item B<debug(level)>
+
+Set debug print options to I<level>. 
+
+
+=cut
+
+sub debug
+{
+	my $this = shift ;
+	my ($level) = @_ ;
+
+	my $class = $this->class() ;
+
+	$DEBUG{$class} ||= 0 ;
+	my $old = $DEBUG{$class} ;
+	$DEBUG{$class} = $level if defined($level) ;
+
+	return $old ;
+}
+
 
 #----------------------------------------------------------------------------
 
-=item B<verbose(level)>
+=item B<verbose_new(level)>
 
 Set verbose print level to I<level>. 
 
@@ -543,7 +568,7 @@ Set verbose print level to I<level>.
 
 =cut
 
-sub verbose
+sub verbose_new
 {
 	my $this = shift ;
 	my ($level) = @_ ;
@@ -566,6 +591,32 @@ sub verbose
 	
 	return $verbose_level ;
 }
+
+#----------------------------------------------------------------------------
+
+=item B<verbose(level)>
+
+Set verbose print options to I<level>. 
+
+
+=cut
+
+sub verbose
+{
+	my $this = shift ;
+	my ($level) = @_ ;
+
+	my $class = $this->class() ;
+
+	$VERBOSE{$class} ||= 0 ;
+	my $old = $VERBOSE{$class} ;
+	$VERBOSE{$class} = $level if defined($level) ;
+
+	return $old ;
+}
+
+
+
 
 
 #----------------------------------------------------------------------------

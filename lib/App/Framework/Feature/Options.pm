@@ -221,7 +221,7 @@ Giving the options HASH values:
 use strict ;
 use Carp ;
 
-our $VERSION = "1.000" ;
+our $VERSION = "1.002" ;
 
 
 #============================================================================================
@@ -727,7 +727,7 @@ sub defaults_from_obj
 
 	my $option_fields_href = $this->_option_fields_hash() ;
 
-$this->prt_data("## defaults_from_obj() names=", $names_aref) ;
+$this->_dbg_prt(["## defaults_from_obj() names=", $names_aref]) ;
 
 	# get object vars
 	my %vars = $obj->vars ;
@@ -747,13 +747,13 @@ $this->prt_data("## defaults_from_obj() names=", $names_aref) ;
 	# scan options
 	foreach my $option_name (@names)
 	{
-		if (exists($vars{$option_name}))
+		if (exists($vars{$option_name}) && exists($option_fields_href->{$option_name}))
 		{
 			$this->modify_default($option_name, $vars{$option_name}) ;
-print " + modify default: $option_name = $vars{$option_name}\n" ;			
+$this->_dbg_prt([ " + modify default: $option_name = $vars{$option_name}\n"]) ;			
 		}
 	}
-$this->prt_data("Options=", $option_fields_href) ;
+$this->_dbg_prt(["Options=", $option_fields_href]) ;
 }
 
 #----------------------------------------------------------------------------
@@ -780,7 +780,7 @@ sub obj_vars
 	# get object vars
 	my %vars = $obj->vars ;
 
-$this->prt_data("## obj_vars() names=", $names_aref, "Options=", $option_fields_href) ;
+$this->_dbg_prt(["## obj_vars() names=", $names_aref, "Options=", $option_fields_href]) ;
 	
 	my @names ;
 	if ($names_aref)
@@ -794,17 +794,17 @@ $this->prt_data("## obj_vars() names=", $names_aref, "Options=", $option_fields_
 		@names = keys %$option_fields_href ;
 	}
 	
-	# scan options
+	# scan names
 	my %set ;
 	foreach my $option_name (@names)
 	{
-		if (exists($vars{$option_name}))
+		if (exists($vars{$option_name}) && exists($option_fields_href->{$option_name}))
 		{
 			$set{$option_name} = $this->option($option_name) ;
 		}
 	}
 
-$this->prt_data(" + setting=", \%set) ;
+$this->_dbg_prt([" + setting=", \%set]) ;
 	
 	# set the variables on the object (if necessary)
 	$obj->set(%set) if keys %set ;
