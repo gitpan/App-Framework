@@ -46,6 +46,7 @@ my $VERBOSE=0;
 			
 			++$arg ;
 		}
+		push @ARGV, @array ; # array
 		eval {
 			local *STDOUT ;
 			local *STDERR ;

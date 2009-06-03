@@ -1,5 +1,11 @@
 Revision history for App-Framework
 
+0.94    Wed Jun 03 14:04:00 2009
+		Fixed Filter extension
+		Bug fix: Args defaults was not checking properly
+		Updated Makefile.PL to check website for later version
+		Updated some more POD
+
 0.93    Fri May 22 14:04:00 2009
 		Optimised debug & verbose methods in Object (was slugging apps)
 		Corrected Extension & Filter modules

@@ -14,7 +14,7 @@ my $VERBOSE=0;
 	my $stdout="" ;
 	my $stderr="" ;
 
-	diag( "Testing args (open handles)" );
+	diag( "Testing args (open handles with defaults)" );
 
 	# 0 = arg name
 	# 1 = arg value (filename/dirname)
@@ -66,14 +66,28 @@ my $VERBOSE=0;
 	}
 
 	
-	plan tests => 2 + ((2 + (scalar(@args) * 2)) * 2 * 2) + (2 * $open_checks) + 2+2 + (1 * $outfile) + (1 * $infile) + $outfile + 1 ;
+	plan tests => 2 # array & hash check
+	+ ((2 + (scalar(@args) * 2)) * 2 * 2) # 4 x arg_test = 4 x (6*2 + 2) = 56
+	+ (2 * $open_checks)  # 2 * 4 = 8
+	#+2+2 
+	+ (1 * $outfile) 
+	+ (1 * $infile) 
+	+ $outfile 
+	#+ 1 
+	;
 
 	@ARGV = () ;
-	foreach my $arg_aref (@args)
-	{
-		push @ARGV, $arg_aref->[1] ;
-	}
-	App::Framework->new()->go() ;
+#	foreach my $arg_aref (@args)
+#	{
+#		push @ARGV, $arg_aref->[1] ;
+#	}
+	App::Framework->new(
+		'feature_config' => {
+			'Args' => {
+				'debug'	=> $DEBUG,
+			},
+		},
+	)->go() ;
 
 	
 
@@ -121,15 +135,15 @@ $app->prt_data("Args: list=", \@arglist, "hash=", \%arghash) ;
 		}
 	}
 	
-	## Array should have STDIN open
-	ok(exists($args_href->{"array_fh"}), "FH array exists") ;
-	ok($args_href->{"array_fh"}, "FH array not null") ;
-	is(ref($args_href->{"array_fh"}), 'ARRAY', "FH array is an array ref") ;
+#	## Array should have STDIN open
+#	ok(exists($args_href->{"array_fh"}), "FH array exists") ;
+#	ok($args_href->{"array_fh"}, "FH array not null") ;
+#	is(ref($args_href->{"array_fh"}), 'ARRAY', "FH array is an array ref") ;
 
-	my @a = $app->args() ;
-	my $aref = pop @a ;
-	ok(scalar(@$aref)==1, "Last arg array length is 1") ;
-	is($aref->[0], 'STDIN', "Last arg array value is STDIN") ;
+#	my @a = $app->args() ;
+#	my $aref = pop @a ;
+#	ok(scalar(@$aref)==1, "Last arg array length is 1") ;
+#	is($aref->[0], 'STDIN', "Last arg array value is STDIN") ;
 		
 	
 	## Created file
@@ -225,8 +239,8 @@ sub arg_test
 		
 	## Test for correct number of args
 	# HASH should have N more, where N=number of open files
-	is(scalar(@$arglist_aref), scalar(@args)+1, "$src: Number of args (array)") ;
-	is(scalar(keys %$arghash_href), scalar(@args)+$open_checks+2, "$src: Number of args (hash)") ;
+	is(scalar(@$arglist_aref), scalar(@args), "$src: Number of args (array)") ;
+	is(scalar(keys %$arghash_href), scalar(@args)+$open_checks, "$src: Number of args (hash)") ;
 
 	## test each
 	foreach my $arg_aref (@args)
@@ -251,14 +265,12 @@ Tests named args handling
 
 [ARGS]
 
-* src1=f	Input file
-* src2=d	Input directory
-* src3=if	Existing
-* out1=>f	Output file
-* out2=>d	Output directory
-* out3=>>f	Output file append
-* array=<f*	All other args are input files
-
+* src1=f	Input file				[default=t/args/file]
+* src2=d	Input directory			[default=t/args/dir]
+* src3=if	Existing				[default=t/args/exists]
+* out1=>f	Output file				[default=t/args/outfile]
+* out2=>d	Output directory		[default=t/args/outdir]
+* out3=>>f	Output file append		[default=t/args/outfile2]
 
 [DESCRIPTION]
 

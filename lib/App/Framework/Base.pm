@@ -370,7 +370,7 @@ print " ## var=$var  can replace now=$replace\n" if $class_debug;
 													
 	print " ## ALL DONE $key: $escaped$var = \"$prefix$replace\"\n\n" if $class_debug;
 							"$prefix$replace" ;
-						}egxm;
+						}egxm;	## NOTE: /m is for multiline anchors; /s is for multiline dots
 		}
 
 $class->prt_data("Hash now=", $hash_ref) if $class_debug>=2;

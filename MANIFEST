@@ -48,6 +48,7 @@ t/01-Mandev.t
 t/02-Options.t
 t/03-Inc.t
 t/04-Args.t
+t/04-ArgsDefault.t
 t/04-ArgsArray.t
 t/04-ArgsArray2.t
 t/04-ArgsOpen.t
@@ -56,6 +57,8 @@ t/06-pod-coverage.t
 t/07-pod.t
 t/10-Feature-Run.t
 t/20-Feature-Config.t
+t/100-Extension-Filter.t
+t/100-Extension-Filter-std.t
 t/args/dir/dummy
 t/args/exists
 t/args/file
@@ -65,3 +68,6 @@ t/lib/MyAppLib.pm
 t/config/20-Feature-Config.conf
 t/config2/20-Feature-Config.conf
 t/MyApp.pm
+t/filter/source.txt
+t/test/filtertest.pl
+

@@ -204,7 +204,10 @@ $this->_dbg_prt(["#!# heap [$heap]", $heap]) ; ;
 	{
 		# save original
 		$heap->{'extend_fn'}{$fn} = $this->$fn ;
-$this->_dbg_prt(["#!# + pkg=$pkg Extend $fn - saved ($heap->{'extend_fn'}{$fn}), new $fn=($spec{$fn})\n"]) ;
+{
+my $saved = $heap->{'extend_fn'}{$fn} || "" ;
+$this->_dbg_prt(["#!# + pkg=$pkg Extend $fn - saved ($saved), new $fn=($spec{$fn})\n"]) ;
+}
 		
 		# update function
 		$this->$fn($spec{$fn}) ;
@@ -237,12 +240,9 @@ sub call_extend_fn
 	my $call = $heap->{'extend_fn'}{$fn} ;
 #$this->debug(2);
 my $pkg = (caller(0))[0] ;
-$this->_dbg_prt(["#!# pkg=$pkg call_extend_fn($fn) call=$call HEAP [$heap]=", $heap]) ; ;	
+my $dbg_call = $call||'' ;
+$this->_dbg_prt(["#!# pkg=$pkg call_extend_fn($fn) call=$dbg_call HEAP [$heap]=", $heap]) ; ;	
 
-	# get default if not extended
-##	$call ||= $this->$fn ;
-$this->_dbg_prt(["#!# + pkg=$pkg call=$call\n"]) ;	
-	
 	# do call if specified
 	if ($call)
 	{

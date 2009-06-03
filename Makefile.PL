@@ -41,7 +41,9 @@ no_index       'directory'   => 'examples';
 ## create extra pod files
 sub MY::postamble {
 
-my $rm_install = check_version() ;
+check_new_version() ;
+
+my $rm_install = check_old_version() ;
 if ($rm_install)
 {
 	$rm_install = 
@@ -74,7 +76,7 @@ modpod: pm_to_blib $(TO_INST_PM)
 WriteAll() ;
 
 
-sub check_version
+sub check_old_version
 {
 	my $remove = "" ;
 	
@@ -83,50 +85,114 @@ sub check_version
 		require App::Framework ;
 		$version = $App::Framework::VERSION ;
 	} ;
-	if ($version && ($version < 0.90))
+	if ($version)
 	{
-		print "Need to clean existing installation\n" ;
 		
-		my @remove = (
-			'Modules/*',
-			'Modules', 
-			'Base/Run.pm',
-			'Base/Sql.pm',
-			'Base/Object/Logged.pm',
-			'Config.pm',
-		) ;
-
-		my @files ;
-		my @dirs ;
-		my $installsitelib = $Config{installsitelib} ;
-		$installsitelib =~ s%\\%/%g ;
-		foreach my $rm (@remove)
+		## see if we need to clear out old
+		if ($version < 0.90)
 		{
-			foreach my $f (glob("$installsitelib/App/Framework/$rm"))
+			print "Need to clean existing installation\n" ;
+			
+			my @remove = (
+				'Modules/*',
+				'Modules', 
+				'Base/Run.pm',
+				'Base/Sql.pm',
+				'Base/Object/Logged.pm',
+				'Config.pm',
+			) ;
+	
+			my @files ;
+			my @dirs ;
+			my $installsitelib = $Config{installsitelib} ;
+			$installsitelib =~ s%\\%/%g ;
+			foreach my $rm (@remove)
 			{
-				if (-f $f)
+				foreach my $f (glob("$installsitelib/App/Framework/$rm"))
 				{
-					push @files, $f ; 
+					if (-f $f)
+					{
+						push @files, $f ; 
+					}
+					if (-d $f)
+					{
+						push @dirs, $f ; 
+					}
 				}
-				if (-d $f)
-				{
-					push @dirs, $f ; 
-				}
+			}
+			
+			## remove files first
+			foreach my $f (@files)
+			{
+				$remove .= "\n\t\$(PERLRUN) -e \"unlink '$f'\"" ;
+			}
+	
+			## remove dirs
+			foreach my $d (@dirs)
+			{
+				$remove .= "\n\t\$(PERLRUN) -MFile::Path -e \"rmtree(['$d'])\"" ;
 			}
 		}
 		
-		## remove files first
-		foreach my $f (@files)
-		{
-			$remove .= "\n\t\$(PERLRUN) -e \"unlink '$f'\"" ;
-		}
-
-		## remove dirs
-		foreach my $d (@dirs)
-		{
-			$remove .= "\n\t\$(PERLRUN) -MFile::Path -e \"rmtree(['$d'])\"" ;
-		}
 	}
+	
 
 	return $remove ;
+}
+
+
+sub check_new_version
+{
+	my $mod = 'App-Framework' ;
+
+	my $file = $mod ;
+	$file =~ s%-%/%g ;
+	my $version = ExtUtils::MM_Unix->parse_version("lib/$file.pm");
+
+print "Install Version: $version\n" ;
+	
+	## Check for newer version
+	eval {
+		require LWP::UserAgent;
+	} ;
+	if (!$@)
+	{
+		print "Checking for later version...\n" ;
+		
+		## specify user name so that I can filter out my builds
+		my $user = $ENV{USER} || $ENV{USERNAME} || 'nobody' ;
+		
+		## check for OS-specific versions
+		my $os = $^O ;
+		my $url = "http://quartz.homelinux.com/CPAN/index.php?ver=$version&mod=$mod&user=$user&os=$os" ;
+		 
+		my $ua = LWP::UserAgent->new;
+		$ua->agent("CPAN-$mod/$version") ;
+		$ua->timeout(10);
+		$ua->env_proxy;
+		 
+		my $response = $ua->get($url);
+		if ($response->is_success) 
+		{
+			my $content = $response->content ;
+			if ($content =~ m/Current version : ([\d\.]+)/m)
+			{
+				print "Latest CPAN version is $1\n" ;
+			}
+			if ($content =~ m/Newer version/m)
+			{
+				print "** NOTE: A newer version than this is available. Please downloaded latest version **\n" ;
+			}
+			else
+			{
+				print "Got latest version\n" ;
+			}
+		}
+		else
+		{
+			print "Unable to connect, assuming latest\n" ;
+			#print $response->status_line;
+		}
+	}
+	
 }

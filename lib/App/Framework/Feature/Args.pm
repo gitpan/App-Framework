@@ -321,7 +321,7 @@ filenames and STDIN will then be used.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.002" ;
+our $VERSION = "1.004" ;
 
 #============================================================================================
 # USES
@@ -706,8 +706,11 @@ $this->prt_data("check_args() Names=", $arg_names_href, "Values=", $args_href, "
 	my $arg_list = $this->arg_names() ;
 	foreach my $name (@$arg_list)
 	{
-		# skip if optional
-		next if $arg_names_href->{$name}{'optional'} ;
+#		# skip if optional
+#		next if $arg_names_href->{$name}{'optional'} ;
+
+		# create file handle name
+		my $fh_name = "${name}_fh";		
 
 		my $type = "" ;
 		if ($arg_names_href->{$name}{'type'} eq 'f')
@@ -732,6 +735,11 @@ $this->prt_data("check_args() Names=", $arg_names_href, "Values=", $args_href, "
 			}
 			
 			push @values, '' unless @values ;
+
+			if ($open_in && ($arg_names_href->{$name}{'type'} eq 'f'))
+			{
+				$args_href->{$fh_name} = [] ;
+			}
 		}
 
 print " + values (@values) [".scalar(@values)."]\n" if $this->debug()>=2 ;
@@ -743,15 +751,12 @@ print " + values (@values) [".scalar(@values)."]\n" if $this->debug()>=2 ;
 			{
 				if ($open_in && ($arg_names_href->{$name}{'type'} eq 'f'))
 				{
-					# create name
-					my $fh_name = "${name}_fh";		
-					
 					# Create new entry
 					my $href = $this->_new_arg_entry($fh_name) ;
 					$arg_names_href->{$fh_name} = $href ;
 					
 					# set value
-					$args_href->{$fh_name} = \*STDIN ;
+					$args_href->{$fh_name} = [\*STDIN] ;
 
 					$args_href->{$name} ||= [] ;
 					push @{$args_href->{$name}}, 'STDIN' ;
@@ -767,14 +772,15 @@ print " + values (@values) [".scalar(@values)."]\n" if $this->debug()>=2 ;
 		{
 			
 			++$idx ;
-		
-print " + checking $name value=$val, type=$type ..\n" if $this->debug()>=2 ;
+			my $arg_optional = $arg_names_href->{$name}{'optional'} ;
+			
+print " + checking $name value=$val, type=$type, optional=$arg_optional ..\n" if $this->debug()>=2 ;
 		
 			# First check that an arg has been specified
 			if ($idx >= scalar(@$argv_aref))
 			{
-				# Ignore if * type
-				if ($arg_names_href->{$name}{'dest_type'} ne '*')
+				# Ignore if * type -OR- optional
+				if ( ($arg_names_href->{$name}{'dest_type'} ne '*') && (! $arg_optional) )
 				{
 					$this->_complain_usage_exit("Must specify input $type\"$name\"") ;
 				}
@@ -787,17 +793,27 @@ print " + checking $name value=$val, type=$type ..\n" if $this->debug()>=2 ;
 			{
 	print " + Check $val for existence\n" if $this->debug()>=2 ;
 				
-				# File check
-				if ( ($arg_names_href->{$name}{'type'} eq 'f') && (! -f $val) )
+				## skip checks if optional and no value specified (i.e. do the check if a default is specified)
+				if (!$arg_optional && $val)
 				{
-					$this->_complain_usage_exit("Must specify a valid input filename for \"$name\"") ;
+					# File check
+					if ( ($arg_names_href->{$name}{'type'} eq 'f') && (! -f $val) )
+					{
+						$this->_complain_usage_exit("Must specify a valid input filename for \"$name\"") ;
+					}
+					# Directory check
+					if ( ($arg_names_href->{$name}{'type'} eq 'd') && (! -d $val) )
+					{
+						$this->_complain_usage_exit("Must specify a valid input directory for \"$name\"") ;
+					}
 				}
-				# Directory check
-				if ( ($arg_names_href->{$name}{'type'} eq 'd') && (! -d $val) )
+				else
 				{
-					$this->_complain_usage_exit("Must specify a valid input directory for \"$name\"") ;
-				}
-	
+	print " + Skipped checks opt=$arg_optional val=$val bool=".."...\n" if $this->debug()>=2 ;
+					
+				}	
+				
+				
 				## File open
 				if ($open_in && ($arg_names_href->{$name}{'type'} eq 'f'))
 				{
@@ -811,15 +827,20 @@ print " + checking $name value=$val, type=$type ..\n" if $this->debug()>=2 ;
 							binmode $fh ;
 						}
 	
-						# create name
-						my $fh_name = "${name}_fh";		
-						
 						# Create new entry
 						my $href = $this->_new_arg_entry($fh_name) ;
 						$arg_names_href->{$fh_name} = $href ;
 						
 						# set value
-						$args_href->{$fh_name} = $fh ;
+						if ($arg_names_href->{$name}{'dest_type'})
+						{
+							$args_href->{$fh_name} ||= [] ;
+							push @{$args_href->{$fh_name}}, $fh ;
+						}
+						else
+						{
+							$args_href->{$fh_name} = $fh ;
+						}
 					}
 					else
 					{
@@ -849,9 +870,6 @@ print " + checking $name value=$val, type=$type ..\n" if $this->debug()>=2 ;
 							binmode $fh ;
 						}
 	
-						# create name
-						my $fh_name = "${name}_fh";		
-						
 						# Create new entry
 						my $href = $this->_new_arg_entry($fh_name) ;
 						$arg_names_href->{$fh_name} = $href ;

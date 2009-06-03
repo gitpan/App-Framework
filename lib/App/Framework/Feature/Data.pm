@@ -134,14 +134,20 @@ Environment variables - if no application fields match the variable name, then t
 
 =back 
 
+=head2 Data Comments
 
+Any lines starting with:
+
+    __#
+
+are treated as comment lines and not included in the data.
 
 =cut
 
 use strict ;
 use Carp ;
 
-our $VERSION = "1.000" ;
+our $VERSION = "1.001" ;
 
 
 #============================================================================================
@@ -357,14 +363,16 @@ sub access
 	my $data_ref ;
 	$name ||= "" ;
 
-print "Data: access($name)" if $this->debug() ;
+$this->_dbg_prt(["Data: access($name)\n"]) ;
 	
 	if ($name)
 	{
 		my $data_href = $this->_data_hash() ;
+$this->_dbg_prt(["Data HASH=", $data_href], 2) ;
 		if (exists($data_href->{$name}))
 		{
 			$data_ref = $data_href->{$name} ;
+$this->_dbg_prt([" + Found data for $name=", $data_ref]) ;
 		}		
 	}
 	else
@@ -401,7 +409,7 @@ sub process
 	
 	my $package = $app->package() ;
 
-print "Data: Process data from package $package" if $this->debug() ;
+$this->_dbg_prt(["Data: Process data from package $package\n"]) ;
 
     local (*alias, *stash);             # a local typeglob
 
@@ -421,7 +429,7 @@ no strict "refs" ;
 		
 		*alias = $stash{'DATA'} ;
 
-print "Reading __DATA__\n" if $this->debug() ;
+$this->_dbg_prt(["Reading __DATA__\n"]) ;
 
 		## Read data in - first split into sections
 		my $line ;
@@ -429,16 +437,16 @@ print "Reading __DATA__\n" if $this->debug() ;
 		while (defined($line=<alias>))
 		{
 			chomp $line ;
-print "DATA: $line\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["DATA: $line\n"], 2) ;
 			
 			if ($line =~ m/^\s*__DATA__/)
 			{
-print "+ New __DATA__\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["+ New __DATA__\n"], 2) ;
 				# Start a new list
 				$data_aref = [] ;
 				push @data, $data_aref ;
 
-print "+ Data list size=",scalar(@data),"\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["+ Data list size=",scalar(@data),"\n"], 2) ;
 				
 				# default name
 				my $name = sprintf "data%d", $data_num++ ;
@@ -449,17 +457,17 @@ print "+ Data list size=",scalar(@data),"\n" if $this->debug()>=2 ;
 				{
 					$name = $1 ;
 					$data{$name} = $data_aref ;
-print "+ + named __DATA__ : $name\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["+ + named __DATA__ : $name\n"], 2) ;
 				}
 			}
 			elsif ($line =~ m/^\s*__END__/ )
 			{
-print "+ __END__\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["+ __END__\n"], 2) ;
 				last ;
 			}
 			elsif ($line =~ m/^\s*__#/ )
 			{
-print "+ __# comment\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["+ __# comment\n"], 2) ;
 				# skip
 			}
 			else
@@ -467,13 +475,13 @@ print "+ __# comment\n" if $this->debug()>=2 ;
 				push @$data_aref, $line ;
 			}
 		}
-$this->prt_data("Gathered data=", \@data) if $this->debug()>=2 ;
+$this->_dbg_prt(["Gathered data=", \@data], 2) ;
 
 		# Store
 		$this->_data(\@data) ;
 		$this->_data_hash(\%data) ;
 
-print "Processing __DATA__\n" if $this->debug() ;
+$this->_dbg_prt(["Processing __DATA__\n"]) ;
 		
 		## Look at first section
 		my $obj_settings=0;
@@ -482,7 +490,6 @@ print "Processing __DATA__\n" if $this->debug() ;
 		my @field_data ;
 		foreach $line (@$data_aref)
 		{
-#print "field=$field : $line\n" ;
 
 			if ($line =~ m/^\s*\[(\w+)\]/)
 			{
@@ -491,8 +498,6 @@ print "Processing __DATA__\n" if $this->debug() ;
 				# This is object settings, so need to remove from list
 				$obj_settings=1;
 
-#$this->prt_data(" + Handling field $field - data=", \@field_data) ;
-				
 				# Use the data found so far for this field
 				$this->_handle_field($field, \@field_data) if $field ;
 				
@@ -500,12 +505,9 @@ print "Processing __DATA__\n" if $this->debug() ;
 				$field = $new_field ;
 				@field_data = () ;
 
-#print " + NEW field=$field\n" ;
-				
 			}
 			elsif ($field)
 			{
-#print " + storing line\n" ;
 				push @field_data, $line ;
 			}
 		}
@@ -558,7 +560,7 @@ sub _handle_field
 
 	my $app = $this->app ;
 
-print "Data: _handle_field($field, $field_data_aref)\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["Data: _handle_field($field, $field_data_aref)\n"], 2) ;
 
 	# Handle any existing field values
 	if ($field eq 'options')
@@ -566,7 +568,7 @@ print "Data: _handle_field($field, $field_data_aref)\n" if $this->debug()>=2 ;
 		# Parse the data into options
 		my @options = $this->_parse_options($field_data_aref) ;
 
-print "Data: set app options\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["Data: set app options\n"], 2) ;
 		## Access the application's 'Options' feature to set the options
 #		$app->feature('Options')->append_options(\@options) ;
 		$this->_append_options(\@options) ;
@@ -576,7 +578,7 @@ print "Data: set app options\n" if $this->debug()>=2 ;
 		# Parse the data into args
 		my @args = $this->_parse_options($field_data_aref) ;
 
-print "Data: set app options\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["Data: set app options\n"], 2) ;
 		## Access the application's 'Options' feature to set the options
 		$app->feature('Args')->append_args(\@args) ;
 	}
@@ -589,7 +591,7 @@ print "Data: set app options\n" if $this->debug()>=2 ;
 		$data =~ s/^\s+// ;
 		$data =~ s/\s+$// ;
 
-print "Data: set app field $field => $data\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["Data: set app field $field => $data\n"], 2) ;
 			
 		## Set field directly into application	
 		$app->set($field => $data) ;
@@ -617,7 +619,7 @@ sub _parse_options
 	my $this = shift ;
 	my ($data_aref) = @_ ;
 
-print "Data: _parse_options($data_aref)\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["Data: _parse_options($data_aref)\n"], 2) ;
 
 	my @options ;
 	
@@ -648,7 +650,9 @@ print "Data: _parse_options($data_aref)\n" if $this->debug()>=2 ;
 		{
 			# New option
 			my ($new_spec, $new_summary, $new_default, $new_default_val) = ($1, $2, $3, $4) ;
-			print " + spec: $new_spec,  summary: $new_summary,  default: $new_default, defval=$new_default_val\n" if $this->debug()>=2 ;
+
+			my ($dbg_default, $dbg_defval) = ($new_default||"", $new_default_val||"") ;
+			$this->_dbg_prt([" + spec: $new_spec,  summary: $new_summary,  default: $dbg_default, defval=$dbg_defval\n"], 2) ;
 
 			# Allow default value to be specified with "" or ''
 			if (defined($new_default_val))

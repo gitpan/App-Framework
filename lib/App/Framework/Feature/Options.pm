@@ -747,7 +747,7 @@ $this->_dbg_prt(["## defaults_from_obj() names=", $names_aref]) ;
 	# scan options
 	foreach my $option_name (@names)
 	{
-		if (exists($vars{$option_name}) && exists($option_fields_href->{$option_name}))
+		if (exists($vars{$option_name}) && defined($vars{$option_name}) && exists($option_fields_href->{$option_name}))
 		{
 			$this->modify_default($option_name, $vars{$option_name}) ;
 $this->_dbg_prt([ " + modify default: $option_name = $vars{$option_name}\n"]) ;			

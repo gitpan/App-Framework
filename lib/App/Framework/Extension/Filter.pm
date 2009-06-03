@@ -11,11 +11,192 @@ App::Framework::Extension::Filter - Script filter application object
 
 =head1 DESCRIPTION
 
-Application that filters either a file or a directory to produce some other output
+Application that filters a file or files to produce some other output
+
+
+=head2 Application Subroutines
+
+This extension modifies the normal call flow for the application subroutines. The extension calls the subroutines
+for each input file being filtered. Also, the main 'app' subroutine is called for each of the lines of text in the input file.
+
+The pseudo-code for the extension is:
+
+    FOREACH input file
+        <init variables, state HASH>
+        call 'app_start' subroutine 
+        FOREACH input line
+	        call 'app' subroutine 
+        END
+        call 'app_end' subroutine 
+	END
+
+For each input file, a state HASH is created and passed as a reference to the application subroutines. The state HASH contains
+various values maintained by the extension, but the application may add it's own additional values to the HASH. These values will 
+be passed unmodified to each of the application subroutine calls.
+
+The state HASH contains the following fields:
+
+=over 4
+
+=item * num_files
+
+Total number of input files.
+
+=item * file_number
+
+Current input file number (1 to B<num_files>)
+
+=item * file_list
+
+ARRAY ref. List of input filenames.
+
+=item * vars
+
+HASH ref. Empty HASH created so that any application-specific variables may be stored here.
+
+=item * line_num
+
+Current line number of line being processed (1 to N).
+
+=item * output_lines
+
+ARRAY ref. List of the output lines that are to be written to the output file (maintained by the extension).
+
+=item * file
+
+Current file name of the file being processed.
+
+=item * line
+
+String of line being processed.
+
+=item * output
+
+Special variable used by application to tell extension what to output (see L</Output>).
+
+=back
+
+The state HASH reference is passed to all 3 of the application subroutines. In addition, the input line of text is also passed
+to the main 'app' subroutine. The interface for the subroutines is:
+
+=over 4
+
+=item B<app_start($app, $opts_href, $state_href)>
+
+Called once for each input file. Called at the start of processing. Allows any setting up of variables stored in the state HASH.
+
+Arguments are:
+
+=over 4
+
+=item I<$app> - The application object
+
+=item I<$opts_href> - HASH ref to the command line options (see L<App::Framework::Feature::Options> and L</Filter Options>)
+
+=item I<$state_href> - HASH ref to state
+
+=back
+
+=item B<app($app, $opts_href, $state_href, $line)>
+
+Called once for each input file. Called at the start of processing. Allows any setting up of variables stored in the state HASH.
+
+Arguments are:
+
+=over 4
+
+=item I<$app> - The application object
+
+=item I<$opts_href> - HASH ref to the command line options (see L<App::Framework::Feature::Options> and L</Filter Options>)
+
+=item I<$state_href> - HASH ref to state
+
+=item I<$line> - Text of input line
+
+=back
+
+=item B<app_end($app, $opts_href, $state_href)>
+
+Called once for each input file. Called at the end of processing. Allows for any end of file tidy up, data sorting etc.
+
+Arguments are:
+
+=over 4
+
+=item I<$app> - The application object
+
+=item I<$opts_href> - HASH ref to the command line options (see L<App::Framework::Feature::Options> and L</Filter Options>)
+
+=item I<$state_href> - HASH ref to state
+
+=back
+
+=back 
+
+
+=head2 Output
+
+By default, each time the extension calls the 'app' subroutine it sets the B<output> field of the state HASH to undef. The 'app'
+subroutine must set this field to some value for the extension to write anything to the output file.
+
+For examples, the following simple 'app' subroutine causes all input files to be output uppercased:
+
+	sub app
+	{
+		my ($app, $opts_href, $state_href, $line) = @_ ;
+		
+		# uppercase
+		$state_href->{output} = uc $line ;	
+	}
+
+If no L</outfile> option is specified, then all output will be written to STDOUT. Also, normally the output is written line-by-line after each line has been processed. If the L</buffer>
+option has been specified, then all output lines are buffered (into the state variable L</output_lines>) then written out at the end of processing all input. Similarly, if the L</inplace>
+option is specified, then buffering is used to process the complete input file then overwrite it with the output.
+
+=head2 Outfile option
+
+The L</outfile> option may be used to set the output filename. This may include variables that are specific to the Filter extension, where the variables value is updated for each
+input file being processed. The following Filter-sepcific variables may be used:
+
+		$filter{'filter_file'} = $state_href->{file} ;
+		$filter{'filter_filenum'} = $state_href->{file_number} ;
+		my ($base, $path, $ext) = fileparse($file, '\..*') ;
+		$filter{'filter_name'} = $base ;
+		$filter{'filter_base'} = $base ;
+		$filter{'filter_path'} = $path ;
+		$filter{'filter_ext'} = $ext ;
+
+=over 4
+
+=item I<filter_file> - Input full file path
+
+=item I<filter_base> - Basename of input file (excluding extension)
+
+=item I<filter_name> - Alias for L</filter_base>
+
+=item I<filter_path> - Directory path of input file
+
+=item I<filter_ext> - Extension of input file
+
+=item I<filter_filenum> - Input file number (starting from 1)
+
+=back
+
+
+NOTE: Specifying these variables for options at the command line will require you to escape the variables per the operating system you are using (e.g. use single quotes ' ' around
+the value in Linux).
+
+For example, with the command line arguments:
+
+    -outfile '/tmp/$filter_name-$filter_filenum.txt' afile.doc /doc/bfile.text
+
+Processes './afile.doc' into '/tmp/afile-1.txt', and '/doc/bfile.text' into '/tmp/bfile-2.txt'
+
+
+=head2 Example
 
 B<DOCUMENTATION TO BE COMPLETED>
 
-B<BETA CODE ONLY - NOT TO BE USED IN PRODUCTION SCRIPTS>
 
 
 =cut
@@ -48,21 +229,72 @@ our @ISA ;
 # GLOBALS
 #============================================================================================
 
+=head2 ADDITIONAL COMMAND LINE OPTIONS
+
+This extension adds the following additional command line options to any application:
+
+=over 4
+
+=item B<-skip_empty> - Skip blanks
+
+Do not process empty lines (lines that contain only whitespace)
+
+=item B<-trim_space> - Trim spaces
+
+Remove spaces from start and end of lines
+
+=item B<-trim_comment> - Trim comments
+
+Remove any comments from the line, starting from the comment string to the end of the line
+
+=item B<-inplace> - In-place filter
+
+Read file, process, then overwrite original input file with processed output
+
+=item B<-outdir> - Specify output directory
+
+Write file(s) into specified directory rather that into same directory as input file
+
+=item B<-outfile> - Specify output file
+
+Specify the output filename, which may include variables (see L</Output Filename>)
+
+=item B<-comment> - Specify command string 
+
+Specify the comment start string. Used in conjuntion with L</-trim_comment>.
+
+=back
+
+=cut
+
 # Set of script-related default options
 my @OPTIONS = (
-	['skip_empty',			'Skip blanks', 		'Don not process empty lines', ],
+	['skip_empty',			'Skip blanks', 		'Do not process empty lines', ],
 	['trim_space',			'Trim spaces',		'Remove spaces from start/end of line', ],
 	['trim_comment',		'Trim comments',	'Remove comments from line'],
 	['inplace',				'In-place filter',	'Read file, process, then overwrite input file'],
-#	['outfile',				'Write to file',	'Write filtered output to a file (rather than STDOUT)'],
 	['outdir=s',			'Output directory',	'Write files into specified directory (rather than into same directory as input file)'],
 	['outfile=s',			'Output filename',	'Specify the output filename which may include variables'],
 	['comment=s',			'Comment',			'Specify the comment start string', '#'],
 ) ;
 
+=head2 COMMAND LINE ARGUMENTS
+
+This extension sets the following additional command line arguments for any application:
+
+=over 4
+
+=item B<file> - Input file(s)
+
+Specify one of more input files to be processed. If no files are specified on the command line then reads from STDIN.
+
+=back
+
+=cut
+
 # Arguments spec
 my @ARGS = (
-	['file=s@',				'Input file(s)',	'Specify one (or more) input file to be processed']
+	['file=f*',				'Input file(s)',	'Specify one (or more) input file to be processed']
 ) ;
 
 our $class_debug=0;
@@ -71,9 +303,47 @@ our $class_debug=0;
 
 =head2 FIELDS
 
-None
+Note that the fields match with the command line options.
 
 =over 4
+
+=item B<skip_empty> - Skip blanks
+
+Do not process empty lines (lines that contain only whitespace)
+
+=item B<trim_space> - Trim spaces
+
+Remove spaces from start and end of lines
+
+=item B<trim_comment> - Trim comments
+
+Remove any comments from the line, starting from the comment string to the end of the line
+
+=item B<inplace> - In-place filter
+
+Read file, process, then overwrite original input file with processed output
+
+=item B<buffer> - Buffer output
+
+Store output lines into a buffer, then write out file at end of processing
+
+=item B<outdir> - Specify output directory
+
+Write file(s) into specified directory rather that into same directory as input file
+
+=item B<outfile> - Specify output file
+
+Specify the output filename, which may include variables (see L</Output Filename>)
+
+=item B<comment> - Specify command string 
+
+Specify the comment start string. Used in conjuntion with L</trim_comment>.
+
+=item B<out_fh> - Output file handle 
+
+Read only. File handle of current output file.
+
+=back
 
 =cut
 
@@ -82,7 +352,7 @@ my %FIELDS = (
 	'skip_empty'	=> 0,
 	'trim_space'	=> 0,
 	'trim_comment'	=> 0,
-	'comment'		=> ['#'],
+	'comment'		=> '#',
 	'buffer'		=> 0,
 	'inplace'		=> 0,
 #	'outfmt'		=> '$base.txt',
@@ -97,8 +367,6 @@ my %FIELDS = (
 ) ;
 
 #============================================================================================
-
-=back
 
 =head2 CONSTRUCTOR METHODS
 
@@ -128,16 +396,8 @@ sub new
 
 	my $class = ref($obj) || $obj ;
 
-#print "App::Framework::Extension::Filter->new() class=$class\n" if $class_debug ;
-
-#	# Create object
-#	my $this = $class->SUPER::new(
-#		%args, 
-#	) ;
-
 	## create object dynamically
 	my $this = App::Framework::Core->inherit($class, %args) ;
-
 
 #print "Filter - $class ISA=@ISA\n" if $class_debug ;
 
@@ -226,9 +486,21 @@ sub filter_run
 
 	## save for later
 	$this->_filter_opts($opts_href) ;
+
+$this->_dbg_prt(["Args=", $args_href, "Opts=", $opts_href]) ;
 	
 	# Get command line arguments
 	my @args = @{ $args_href->{'file'} || [] } ;
+	my @args_fh = @{ $args_href->{'file_fh'} || [] } ;
+
+	## check for in-place editing on STDIN
+	if ($opts_href->{inplace})
+	{
+		if ( (scalar(@args) == 1) && ($args_fh[0] == \*STDIN) )
+		{
+			$this->throw_fatal("Error: Cannot do in-place editing of standard input") ;
+		}
+	}
 
 	$this->_dispatch_entry_features(@_) ;
 
@@ -247,13 +519,15 @@ $this->_dbg_prt(["#!# Hello, Ive started filter_run()...\n"]) ;
 	$state_href->{vars} = {} ;
 
 	## do each file
-	foreach my $file (@args)
+#	foreach my $file (@args)
+	for (my $fnum=0; $fnum < $state_href->{num_files}; ++$fnum)
 	{
 
+		$state_href->{file_number} = $fnum+1 ;
 		$state_href->{outfile} = '' ;
 		$state_href->{line_num} = 1 ;
 		$state_href->{output_lines} = [] ;
-		$state_href->{file} = $file ;
+		$state_href->{file} = $args[$fnum] ;
 
 		$this->_dispatch_label_entry_features('file', $app, $opts_href, $state_href) ;
 		
@@ -263,18 +537,38 @@ $this->_dbg_prt(["#!# Hello, Ive started filter_run()...\n"]) ;
 		$this->call_extend_fn('app_start_fn', $state_href) ;
 
 		## Process file
-		open my $fh, "<$file" or $this->throw_fatal("Unable to read file \"$file\": $!") ;
+#		open my $fh, "<$file" or $this->throw_fatal("Unable to read file \"$file\": $!") ;
+		my $fh = $args_fh[$fnum] ;
 		my $line ;
 		while(defined($line = <$fh>))
 		{
 			chomp $line ;
+			
+			## see if line needs processing
+			if ($opts_href->{trim_space})
+			{
+				$line =~ s/^\s+// ;
+				$line =~ s/\s+$// ;
+			}
+			if ($opts_href->{trim_comment} && $opts_href->{comment})
+			{
+				$line =~ s/$opts_href->{comment}.*$// ;
+			}
+			
 			$state_href->{line} = $line ;
 			$state_href->{output} = undef ;
-
+			
 			$this->_dispatch_label_entry_features('line', $app, $opts_href, $state_href) ;
 
-			## call application
-			$this->call_extend_fn('app_fn', $state_href, $line) ;
+			## see if we skip this line
+			my $skip = 0 ;
+			if ($opts_href->{skip_empty})
+			{
+				$skip=1 if $line =~ m/^\s*$/ ;
+			}
+
+			## call application (if not skipped)
+			$this->call_extend_fn('app_fn', $state_href, $line) unless $skip ;
 			
 			$this->_handle_output($state_href, $opts_href) ;
 
@@ -289,7 +583,7 @@ $this->_dbg_prt(["#!# Hello, Ive started filter_run()...\n"]) ;
 
 		$this->_end_output($state_href, $opts_href) ;
 
-		$state_href->{file_number}++ ;
+#		$state_href->{file_number}++ ;
 
 		$this->_dispatch_label_exit_features('file', $app, $opts_href, $state_href) ;
 	}	
@@ -366,7 +660,7 @@ $this->_dbg_prt(["_start_output\n"]) ;
 	## do nothing if buffering or in-place editing
 	return if ($this->buffer || $this->inplace) ;
 
-$this->_dbg_prt([" + not buffering\n"]) ;
+$this->_dbg_prt([" + not buffering/inplace\n"]) ;
 
 	# open output file (and set up output dir)
 	$this->_open_output($state_href, $opts_href) ;
@@ -395,7 +689,7 @@ $this->_dbg_prt(["_handle_output : output=", $out, "\n"]) ;
 	## do nothing if buffering or in-place editing
 	return if ($this->buffer || $this->inplace) ;
 
-$this->_dbg_prt([" + not buffering\n"]) ;
+$this->_dbg_prt([" + not buffering/inplace\n"]) ;
 
 	## ok to write
 	$this->_wr_output($state_href, $opts_href, $out) if defined($out)  ;
@@ -457,7 +751,13 @@ sub _open_output
 $this->_dbg_prt(["_open_output\n"]) ;
 	
 	my $outfile ;
-	if ($this->outfile)
+	if ($this->inplace)
+	{
+		## Handle in-place editing
+		$outfile = $state_href->{file} ;
+$this->_dbg_prt([" + inplace file=$outfile\n"]) ;
+	}
+	elsif ($this->outfile)
 	{
 		## See if writing to dir
 		my $dir = $this->outdir ;
@@ -467,39 +767,53 @@ $this->_dbg_prt(["_open_output\n"]) ;
 			mkpath([$dir], $this->debug, 0755) ;
 		}
 		$dir ||= '.' ;
-		my $fmt = $this->outfile ;
 		
-		my $file = $state_href->{file} ;
-		my $number = $state_href->{file_number} ;
-		my ($base, $path, $ext) = fileparse($file, '\..*') ;
-		my $name = $base ;
+		my %opts = $this->options() ;
+		my %app_vars = $this->vars() ;
+		my %filter ;
+		$filter{'filter_fmt'} = $this->outfile ;
+		$filter{'filter_file'} = $state_href->{file} ;
+		$filter{'filter_filenum'} = $state_href->{file_number} ;
+		my ($base, $path, $ext) = fileparse($state_href->{file}, '\..*') ;
+		$filter{'filter_name'} = $base ;
+		$filter{'filter_base'} = $base ;
+		$filter{'filter_path'} = $path ;
+		$filter{'filter_ext'} = $ext ;
+
+		$this->expand_keys(\%filter, [\%opts, \%app_vars, \%ENV]) ;
 		
-		eval "\$outfile = \"$fmt\"" ;
+		$outfile = $filter{'filter_fmt'} ;
+		
 $this->_dbg_prt([" + eval=$@\n"]) ;
-$this->_dbg_prt([" + outfile=$outfile: dir=$dir fmt=$fmt file=$file num=$number base=$base path=$path\n"]) ;
+$this->_dbg_prt([" + outfile=$outfile: dir=$dir fmt=$filter{'filter_fmt'} file=$filter{'filter_file'} num=$filter{'filter_filenum'} base=$base path=$path\n"]) ;
 		
 		$outfile = File::Spec->catfile($dir, $outfile) ;
-		$outfile = File::Spec->rel2abs($outfile) ;
 	}
 	
+	## Output file specified?
 	if ($outfile)
 	{
-		my $file = $state_href->{file} ;
-		$file = File::Spec->rel2abs($file) ;
+		$outfile = File::Spec->rel2abs($outfile) ;
+		my $infile = File::Spec->rel2abs($state_href->{file}) ;
 
-		if ($outfile eq $file)
+		if ($outfile eq $infile)
 		{
-			# In place editing
+			# In place editing - make sure flag is set
 			$this->inplace(1) ;
+
+$this->_dbg_prt([" + inplace $outfile\n"]) ;
 		}
-		else
-		{
+
+#		else
+#		{
 			## Open output
 			open my $outfh, ">$outfile" or $this->throw_fatal("Unable to write \"$outfile\" : $!") ;
 			$this->out_fh($outfh) ;
+
+$this->_dbg_prt([" + opened $outfile fh=$outfh\n"]) ;
 			
 			$state_href->{outfile} = $outfile ;
-		}
+#		}
 		
 	}
 	else
