@@ -37,15 +37,29 @@ my $VERBOSE=0;
            '-man',         
 	) ;
 
+
+	## start with a redirect check
+	eval{
+		local *STDOUT ;
+		local *STDERR ;
+
+		open(STDOUT, '>', \$stdout)  or die "Can't open STDOUT: $!" ;
+		open(STDERR, '>', \$stderr) or die "Can't open STDERR: $!";
+
+		print "I was hoping for more!\n" ;
+	} ;
+	if (!$stdout)
+	{
+		diag("Sorry, can't redirect stdout: $@") ;
+		plan skip_all => 'Unable to redirect stdout (I need to redirect to check the man pages)';
+		exit 0 ;
+	}
+
+	## ok to run tests
 	plan tests => scalar(@man) + scalar(@expected) ;
 	
 	## Manual pages
-	
 
-
-	## Standard error catch with usage
-#	my $app = App::Framework->new('exit_type'=>'die') ;
-	
 	# Expect output (stdout):
 	#
 	#Error: Must specify input file "source"

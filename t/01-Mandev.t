@@ -113,8 +113,16 @@ my $VERBOSE=0;
 #		$app->go() ;
 		pop @ARGV ;
 	} ;
-
 print "App -man-dev: $stdout\n\n" ;
+
+	if (!$stdout)
+	{
+		diag("Sorry, can't redirect stdout: $@") ;
+		plan skip_all => 'Unable to redirect stdout (I need to redirect to check the man pages)';
+		exit 0 ;
+	}
+
+
 
 	#           -pod                  Output full pod
 	#           -dbg-data             Debug option: Show __DATA__

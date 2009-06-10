@@ -23,7 +23,7 @@ Base class for applications. Expected to be derived from by an implementable cla
 use strict ;
 use Carp ;
 
-our $VERSION = "1.010" ;
+our $VERSION = "1.012" ;
 
 
 #============================================================================================
@@ -189,10 +189,27 @@ print "App::Framework::Core->new() class=$class\n" if $class_debug ;
 	$this->set_paths($filename) ;
 	
 	## set up functions
-	foreach my $fn (qw/app_start app app_end usage/)
+#	foreach my $fn (qw/app_start app app_end usage/)
+	foreach my $fn_aref (
+		# prefered
+		['app_start',	'app_start'],
+		['app',			'app'],
+		['app_end',		'app_end'],
+		['usage',		'usage'],
+
+		# alternates
+		['app_begin',	'app_start'],
+		['app_enter',	'app_start'],
+		['app_init',	'app_start'],
+		['app_finish',	'app_end'],
+		['app_exit',	'app_end'],
+		['app_term',	'app_end'],
+	)
 	{
+		my ($fn, $alias) = @$fn_aref ;
+		
 		# Only add function if it's not already been specified
-		$this->_register_fn($fn) ;
+		$this->_register_fn($fn, $alias) ;
 	}
 
 	## Get version
@@ -663,7 +680,7 @@ sub install_features
 	## make a list of features
 	my @features = @$feature_list ;
 	
-$this->prt_data("install_features()", \@features, "features args=", $feature_args_href) if $this->debug ;
+$this->_dbg_prt(["install_features()", \@features, "features args=", $feature_args_href]) ;
 	
 	## Now try to install them
 	foreach my $feature (@features)
@@ -714,7 +731,7 @@ $this->prt_data("install_features()", \@features, "features args=", $feature_arg
 
 		croak "Feature \"$feature\" not supported" unless ($loaded) ;
 
-print "Feature: $feature - loaded=$loaded\n" if $this->debug ;
+$this->_dbg_prt("Feature: $feature - loaded=$loaded\n") ;
 		
 		if ($loaded)
 		{
@@ -756,10 +773,18 @@ print "Feature: $feature - loaded=$loaded\n" if $this->debug ;
 				no warnings 'redefine';
 				no strict 'refs';
 				
-				$feature = lc $feature ;
-				*{"App::Framework::Core::${feature}"} = sub {  
+				## alias <feature>()
+				my $alias = lc $feature ; 
+				*{"App::Framework::Core::${alias}"} = sub {  
 					my $this = shift ;
-					return $feature_obj->access(@_) ;
+					return $feature_obj->$alias(@_) ;
+				};
+
+				## alias <Feature>()
+				$alias = ucfirst $feature ;
+				*{"App::Framework::Core::${alias}"} = sub {  
+					my $this = shift ;
+					return $feature_obj->$alias(@_) ;
 				};
 			}
 		}
@@ -770,7 +795,7 @@ print "Feature: $feature - loaded=$loaded\n" if $this->debug ;
 	$this->feature_list( [ sort {$features_href->{$a}{'priority'} <=> $features_href->{$b}{'priority'}} keys %$features_href ] ) ;
 
 	
-$this->prt_data("installed features = ", $features_href) if $this->debug ;
+$this->_dbg_prt(["installed features = ", $features_href]) ;
 	
 }
 
@@ -848,7 +873,7 @@ sub _feature_info
 	}	
 	else
 	{
-		$this->throw_fatal("Error: feature \"$name\" not found") ;
+		$this->throw_fatal("Feature \"$name\" not found") ;
 	}
 
 	return $info_href ;	
@@ -961,21 +986,21 @@ sub _dispatch_features
 	my $this = shift ;
 	my ($method, $status, @args) = @_ ;
 
-print "_dispatch_features(method=$method, status=$status) (@args)\n" if $this->debug ;
+$this->_dbg_prt("_dispatch_features(method=$method, status=$status) (@args)\n") ;
 	
 	# remove package name (if specified)
 	$method =~ s/^(.*)::// ;
 	
 	my $feature_methods_href = $this->_feature_methods() ;
 	my $fn = "${method}_${status}" ;
-print " + method=$method fn=$fn\n" if $this->debug  ;
+$this->_dbg_prt(" + method=$method fn=$fn\n")  ;
 
 	if (exists($feature_methods_href->{$fn}))
 	{
 		foreach my $feature_entry (@{$feature_methods_href->{$fn}})
 		{
-print " + dispatching fn=$fn feature=$feature_entry->{feature}\n" if $this->debug ;
-$this->prt_data("++ entry=", $feature_entry) if $this->debug >=2 ;
+$this->_dbg_prt(" + dispatching fn=$fn feature=$feature_entry->{feature}\n") ;
+$this->_dbg_prt(["++ entry=", $feature_entry], 2) ;
 
 			my $feature_obj = $feature_entry->{'obj'} ;
 			$feature_obj->$fn(@args) ;
@@ -1127,7 +1152,7 @@ $this->_dispatch_entry_features() ;
 		# Get args
 		my $arglist = $this->feature('Args')->get_args() ;
 
-		$this->prt_data("getopts() : arglist=", $arglist) if $this->debug >= 2 ;
+		$this->_dbg_prt(["getopts() : arglist=", $arglist], 2) ;
 	}
 	
 $this->_dispatch_exit_features() ;
@@ -1378,9 +1403,9 @@ sub _exec_fn
 
 	# Append _fn to function name, get the function, and call it if it's defined
 	my $fn_name = "${fn}_fn" ;
-	my $sub = $this->$fn_name() ;
+	my $sub = $this->$fn_name() || '' ;
 
-print "_exec_fn($fn) this=$this fn=$fn_name sub=$sub\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_exec_fn($fn) this=$this fn=$fn_name sub=$sub\n", 2) ;
 #$this->prt_data("_exec_fn($fn) args[1]=", \$args[1], "args[2]=",\$args[2]) ;
 #if $this->debug()>=2 ;
 
@@ -1456,9 +1481,10 @@ sub _import
 sub _register_fn 
 {
 	my $this = shift ;
-	my ($function) = @_ ;
+	my ($function, $alias) = @_ ;
 	
-	my $field ="${function}_fn" ; 
+	$alias ||= $function ;
+	my $field ="${alias}_fn" ; 
 
 	$this->_register_var('CODE', $function, $field) unless $this->$field() ;
 }
@@ -1502,7 +1528,7 @@ sub _register_var
 
     local (*alias);             # a local typeglob
 
-print "_register_var($type, $external_name, $field_name)\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_register_var($type, $external_name, $field_name)\n", 2) ;
 
     # We want to get access to the stash corresponding to the package
     # name
@@ -1514,7 +1540,7 @@ no strict "refs" ;
 	{
 		*alias = $stash{$external_name} ;
 
-print " + found $external_name in $package\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + found $external_name in $package\n", 2) ;
 
 		if ($type eq 'SCALAR')
 		{
@@ -1541,7 +1567,7 @@ print " + found $external_name in $package\n" if $this->debug()>=2 ;
 		{
 			if (defined(&alias))
 			{
-print " + + Set $type - $external_name as $field_name\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + + Set $type - $external_name as $field_name\n", 2) ;
 				$this->set($field_name => \&alias) ;
 			}
 		}
@@ -1577,12 +1603,12 @@ sub _expand_vars
 {
 	my $this = shift ;
 
-print "_expand_vars() - START\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_expand_vars() - START\n", 2) ;
 
 	# Get hash of fields
 	my %fields = $this->vars() ;
 
-#$this->prt_data(" + fields=", \%fields) if $this->debug()>=2 ;
+#$this->_dbg_prt([" + fields=", \%fields], 2) ;
 	
 	# work through each field, create a list of those that have changed
 	my %changed ;
@@ -1596,7 +1622,7 @@ print "_expand_vars() - START\n" if $this->debug()>=2 ;
 		my $ix = index $fields{$field}, '$' ; 
 		if ($ix >= 0)
 		{
-print " + + $field = $fields{$field} : index=$ix\n" if $this->debug()>=3 ;
+$this->_dbg_prt(" + + $field = $fields{$field} : index=$ix\n", 3) ;
 
 			# Do replacement
 			$fields{$field} =~ s{
@@ -1614,25 +1640,49 @@ print " + + $field = $fields{$field} : index=$ix\n" if $this->debug()>=3 ;
 								}egx;
 
 
-print " + + + new = $fields{$field}\n" if $this->debug()>=3 ;
+$this->_dbg_prt(" + + + new = $fields{$field}\n", 3) ;
 			
 			# Add to list
 			$changed{$field} = $fields{$field} ;
 		}
 	}
 
-$this->prt_data(" + changed=", \%changed) if $this->debug()>=2 ;
+$this->_dbg_prt([" + changed=", \%changed], 2) ;
 	
 	# If some have changed then set them
 	if (keys %changed)
 	{
-print " + + set changed\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + + set changed\n", 2) ;
 		$this->set(%changed) ;
 	}
 
-print "_expand_vars() - END\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_expand_vars() - END\n", 2) ;
 }
 
+
+
+#----------------------------------------------------------------------------
+
+=item B<debug_prt($items_aref [, $min_debug])>
+
+Print out the items in the $items_aref ARRAY ref iff the application's debug level is >0. 
+If $min_debug is specified, will only print out items if the application's debug level is >= $min_debug.
+
+=cut
+
+sub debug_prt
+{
+	my $this = shift ;
+	my ($items_aref, $min_debug) = @_ ;
+
+	$min_debug ||= 1 ;
+	
+	## check debug level setting
+	if ($this->options->option('debug') >= $min_debug)
+	{
+		$this->prt_data(@$items_aref) ;
+	}
+}
 
 
 

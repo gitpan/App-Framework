@@ -19,7 +19,7 @@ Used by the application framework to create pod-based man pages and help.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.001" ;
+our $VERSION = "1.002" ;
 
 
 #============================================================================================
@@ -209,7 +209,7 @@ sub application_entry
 
 #----------------------------------------------------------------------------
 
-=item B<access([$developer])>
+=item B<pod([$developer])>
 
 Return full pod of application
 
@@ -217,7 +217,7 @@ If the optional $developer flag is set, returns application developer biased inf
 
 =cut
 
-sub access
+sub pod
 {
 	my $this = shift ;
 	my ($developer) = @_ ;
@@ -231,6 +231,16 @@ sub access
 	return $pod ;
 }	
 	
+#----------------------------------------------------------------------------
+
+=item B< Pod([%args]) >
+
+Alias to L</pod>
+
+=cut
+
+*Pod = \&pod ;
+
 #----------------------------------------------------------------------------
 
 =item B<pod_head([$developer])>

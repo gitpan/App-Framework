@@ -30,7 +30,7 @@ my $VERBOSE=0;
 		't/args/exists',
 		't/args/array',
 	) ;
-	plan tests => $input_checks + 1 + 2 + ((1 + (scalar(@args) * 2)) * 2 * 2) + ((1 + (scalar(@array)) ) * 2 );
+	plan tests => 1 + $input_checks + 1 + 2 + ((1 + (scalar(@args) * 2)) * 2 * 2) + ((1 + (scalar(@array)) ) * 2 );
 
 	## These should not work	
 	my $app = App::Framework->new('exit_type'=>'die') ;
@@ -111,11 +111,13 @@ $app->prt_data("Args: passed hash=", $args_href) ;
 	my %arghash = $app->feature('Args')->arg_hash() ;
 
 	my @arglist2 = $app->args() ;
+	my @arglist3 = $app->Args() ;
 
 $app->prt_data("Args: list=", \@arglist, "hash=", \%arghash) ;
 
 	is_deeply($args_href, \%arghash, "HASH compare") ;
 	is_deeply(\@arglist, \@arglist2, "ARRAY compare") ;
+	is_deeply(\@arglist2, \@arglist3, "Access alias") ;
 
 	# test retrived args
 	arg_test("arg_list", \@arglist, \%arghash) ;

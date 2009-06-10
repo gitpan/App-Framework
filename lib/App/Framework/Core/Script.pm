@@ -184,7 +184,7 @@ sub exit
 	my $this = shift ;
 	my ($exit_code) = @_ ;
 
-print "EXIT: $exit_code\n" if $this->debug ;
+$this->_dbg_prt("EXIT: $exit_code\n") ;
 
 	my $exit_type = $this->exit_type() ;
 	if (lc($exit_type) eq 'die')
@@ -211,7 +211,7 @@ sub catch_error
 	my $this = shift ;
 	my ($error) = @_ ;
 
-print "catch_error()\n" if $this->debug ;
+$this->_dbg_prt("catch_error()\n") ;
 
 	$this->SUPER::catch_error($error) ;
 
@@ -272,7 +272,7 @@ sub script_usage
 	$level ||= "" ;
 
 #$this->debug(1);
-print "Start of script_usage($level)\n" if $this->debug ;
+$this->_dbg_prt("Start of script_usage($level)\n") ;
 	
 	# TODO: Work out a better way to convert pod without the use of external file!
 	
@@ -308,7 +308,7 @@ print "Start of script_usage($level)\n" if $this->debug ;
 		-section => 1,
 	) ;
 
-print "End of script_usage()\n" if $this->debug ;
+$this->_dbg_prt("End of script_usage()\n") ;
 	
 	# remove temp file
 	unlink $fname ;

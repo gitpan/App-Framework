@@ -3,15 +3,24 @@ use warnings;
 use inc::Module::Install;
 use File::Path ;
 use Config;
+
+my $name = 'App-Framework' ;
+
+my $mod = $name ;
+$mod =~ s%\-%::%g ;
+
+my $modpath = $name ;
+$modpath =~ s%\-%/%g ;
+
   
 # Define metadata
-name            'App-Framework';
-abstract_from	'lib/App/Framework.pm' ;
-author_from		'lib/App/Framework.pm' ;
-version_from	'lib/App/Framework.pm' ;
-license_from	'lib/App/Framework.pm' ;
+name            $name;
+abstract_from	"lib/$modpath.pm" ;
+author_from		"lib/$modpath.pm" ;
+version_from	"lib/$modpath.pm" ;
+license_from	"lib/$modpath.pm" ;
 perl_version	'5.8.4' ;
-##all_from       'lib/App/Framework.pm';
+##all_from       "lib/$modpath.pm";
   
 # Specific dependencies
 requires       'Cwd'; 
@@ -22,11 +31,12 @@ requires       'File::Spec';
 requires       'File::Find';
 requires       'File::Copy';
 requires       'File::DosGlob';
+requires       'File::Which';
 requires       'Pod::Usage'		=> 1.33 ;	# Need at least this version or -man won't work!
 requires       'Date::Manip';
 requires       'Getopt::Long';
 
-recommends     'DBI' ;
+#recommends     'DBI' ;
 
 test_requires  'Test::More'  => '0.42';
 test_requires  'Test::Pod'  => '1.22';
@@ -34,8 +44,102 @@ test_requires  'Test::Pod::Coverage'  => '1.08';
 
 no_index       'directory'   => 'examples';
 
-##recommends     'Text::CSV_XS'=> '0.50';
-##install_script 'myscript';
+
+## Optional modules
+my %optional = (
+
+	1 => {
+		'name'			=> 'Feature::Sql',
+		'description'	=> 'MySQL support',
+		'requires'		=> {
+			'DBI'			=> 0,
+			'DBD::mysql'	=> 0,
+		},
+	},
+#	2 => {
+#		'name'			=> 'Feature::Mail',
+#		'description'	=> 'Mail support',
+#		'requires'		=> {
+#			'Net::SMTP'		=> 0,
+#		},
+#	},
+#	3 => {
+#		'name'			=> 'Extension::Daemon',
+#		'description'	=> 'Daemon script extension',
+#		'requires'		=> {
+#			'Net::Server::Daemonize'		=> 0,
+#		},
+#	},
+#	4 => {
+#		'name'			=> 'Core::POE',
+#		'description'	=> 'POE script personality',
+#		'requires'		=> {
+#			'POE'		=> 0,
+#		},
+#	},
+) ;
+
+print<<MSG;
+$mod provides a number of optional modules which require additional CPAN modules. Please select
+from the following which $mod modules you would like to be fully installed and tested (any modules
+you do not select will still be available but you will have to manually install any module dependencies).
+
+The optional modules are:
+MSG
+
+for my $num (sort { $a <=> $b } keys %optional) 
+{
+	printf "    [%d] %s - %s\n", $num, $optional{$num}{'name'}, $optional{$num}{'description'} ;
+}
+my $c = prompt("\nEnter your choices, separated by spaces (0=none, a=all):", 0); print "\n";
+
+
+my %to_install ;
+if ($c)
+{
+	if ($c =~ /a/i)
+	{
+		for my $num (keys %optional) 
+		{
+			$to_install{$num} = 1 ;
+		}
+	}
+	else
+	{
+		for my $num (split /\s+/, $c) 
+		{
+			next unless exists($optional{$num}) ;
+			$to_install{$num} = 1 ;
+		}
+	}
+}
+
+my $to_test_str = "" ;
+foreach my $num (keys %to_install)
+{
+	## Add required modules
+	foreach my $req (keys %{$optional{$num}{'requires'}})
+	{
+		my @args = ($req) ;
+		push @args, $optional{$num}{'requires'}{$req} if $optional{$num}{'requires'}{$req} ;
+		require(@args) ;
+	}
+
+	## Add module		
+	$to_test_str .= "$mod\:\:$optional{$num}{name} => 1,\n" ;
+}
+
+open my $fh, ">t/config.pm" ;
+print $fh <<CONFIG;
+package config;
+our \%TO_TEST = (
+$to_test_str
+) ;
+
+1;
+CONFIG
+close $fh ;
+
 
 
 ## create extra pod files
@@ -82,11 +186,14 @@ sub check_old_version
 	
 	my $version ;
 	eval {
-		require App::Framework ;
-		$version = $App::Framework::VERSION ;
+		no strict 'refs';
+		require "$modpath.pm" ;
+				
+		$version = ${"${mod}::VERSION"} ;
 	} ;
 	if ($version)
 	{
+		print "Found an existing installation: Version $version\n" ;
 		
 		## see if we need to clear out old
 		if ($version < 0.90)
@@ -108,7 +215,7 @@ sub check_old_version
 			$installsitelib =~ s%\\%/%g ;
 			foreach my $rm (@remove)
 			{
-				foreach my $f (glob("$installsitelib/App/Framework/$rm"))
+				foreach my $f (glob("$installsitelib/$modpath/$rm"))
 				{
 					if (-f $f)
 					{
@@ -143,13 +250,9 @@ sub check_old_version
 
 sub check_new_version
 {
-	my $mod = 'App-Framework' ;
+	my $version = ExtUtils::MM_Unix->parse_version("lib/$modpath.pm");
 
-	my $file = $mod ;
-	$file =~ s%-%/%g ;
-	my $version = ExtUtils::MM_Unix->parse_version("lib/$file.pm");
-
-print "Install Version: $version\n" ;
+	print "Installing Version: $version\n" ;
 	
 	## Check for newer version
 	eval {
@@ -164,10 +267,10 @@ print "Install Version: $version\n" ;
 		
 		## check for OS-specific versions
 		my $os = $^O ;
-		my $url = "http://quartz.homelinux.com/CPAN/index.php?ver=$version&mod=$mod&user=$user&os=$os" ;
+		my $url = "http://quartz.homelinux.com/CPAN/index.php?ver=$version&mod=$name&user=$user&os=$os" ;
 		 
 		my $ua = LWP::UserAgent->new;
-		$ua->agent("CPAN-$mod/$version") ;
+		$ua->agent("CPAN-$name/$version") ;
 		$ua->timeout(10);
 		$ua->env_proxy;
 		 

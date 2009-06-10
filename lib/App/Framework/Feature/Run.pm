@@ -8,55 +8,160 @@ App::Framework::Feature::Run - Execute external commands
 
   use App::Framework '+Run' ;
 
+  $app->run("perl t/test/runtest.pl"); 
+  $app->run('cmd' => "perl t/test/runtest.pl"); 
+  $app->run('cmd' => "perl t/test/runtest.pl", 'progress' => \&progress);
+  
+  my $results_aref = $app->run('cmd' => "perl t/test/runtest.pl");
+  
+  my $run = $app->run() ;
+  $run->run("perl t/test/runtest.pl");
+  $run->run('cmd' => "perl t/test/runtest.pl", 'timeout' => $sleep);
+
 
 =head1 DESCRIPTION
 
 Provides for external command running from within an application.
 
-B<DOCUMENTATION TO BE COMPLETED>
+An external conmmand may be run using this feature, and the output from the command may be returned for additional processing. The feature
+also provides timed execution (aborting after a certain time), exit code status, and callbacks that can be defined to be called during execution
+and/or after program completion.
 
 =head2 Arguments
 
+The access method for this feature (called as B<$app-E<gt>run()>) allows the complete run settings to be specified as a HASH. The call sets 
+the object L</FIELDS> from the values in this HASH, for example:
+
+  $app->run(
+    'cmd'   => "perl t/test/runtest.pl", 
+    'progress' => \&progress,
+  ) ;
+
+which specifies the command to run along with the L</progress> field (a callback).
+
+A simpler alternative is allowed:
+
+  $app->run("perl t/test/runtest.pl", "some args") ;
+
+or:
+
+  $app->run("perl t/test/runtest.pl some args") ;
+
+The command arguments can be specified either as part of the L</cmd> field definition, or separately in the L</args> field. One benefit of using
+the L</args> field is that the command need only be specified once - subsequent calls will use the same setting, for example:
+
+  $app->run('cmd' => "perl t/test/runtest.pl"); 
+  $app->run('progress' => \&progress);
+  $app->run('progress' => \&progress);
+
 =head2 Return code
+
+When the external command completes, it's return code can be accessed by reading the L</status> field:
+
+  $app->run()->status ;
+  
+This value is set in the feature object to the result of the last run (i.e. you must save status values between runs if you want to
+keep track of the values).
+
+The status value is entirely defined by the external command and the operating system.
+
+Also, if you want your script to automatically abort on error (rather than write your own program error handler) then you can set the 
+B<on_error> field to 'fatal'.
+
+=head2 Required Programs Check
+
+It's a good idea to start your script with a check for all the external programs you're about to use. You can do this by specifying them
+in a HASH ref using the L</required> method. This does the checking for you, returning the path of all the executables. You can also
+tell the object to abort the script if some programs are not found, for example:
+
+  $app->run->set(
+      'on_error'   => 'fatal',
+      'required'   => {
+          'lsvob'      => 1,
+          'ffmpeg'     => 1,
+          'transcode'  => 1,
+          'vlc'        => 1,	
+      },
+  ) ;
+
+NOTE: The values you specify along with the program names are not important when you set the required list - these values get updated
+with the actual executable path.
 
 =head2 Command output
 
+All output (both STDOUT and STDERR) is captured from the external command and can be accessed by reading the L</results> field. This returns
+an ARRAY reference, where the ARRAY contains the lines of text output (one array entry per line).
+
+NOTE: the lines have the original trailing newline B<removed>.
+
+  my $results_aref = $app->run()->results ;
+  foreach my $line (@$results_aref)
+  {
+      print "$line\n";
+  }
+
 =head2 Timeout
 
+If you specify a L</timeout> then the command is executed as normal but will be aborted if it runs for longer than the specified time.
+
+This can be useful, for example, for running commands that don't normally terminate (or run on much longer than is necessary). 
+ 
+
 =head2 Callbacks
+
+There are 2 optional callback routines that may be specified:
+
+=over 4 
+
+=item B<progress> 
+
+This subroutine is called for every line of output from the external command. This can be used in an application for monitoring 
+progress, checking for errors etc.
+
+=item B<check_results> 
+
+This subroutine is called at the end of external command completion. It allows the application to process the results to determine whether
+the command passed or failed some additional criteria. The L</status> field is then set to the results of this subroutine.
+
+=back
 
 
 =head2 Examples
 
-	$app->run(
-		'cmd' 		=> "perl t/test/runtest.pl", 
-	) ;
-	
-	$app->run(
-		'cmd' 		=> "perl t/test/runtest.pl", 
-		'progress'	=> \&progress,
-	) ;
-	
-	my $sleep = 10 ;
-	$expected = \@data ;
-	$delay = $sleep ;
-	$run->run_cmd("perl t/test/runtest.pl", 
-		'progress'	=> \&progress,
-		'args'		=> "ping $sleep",
-		'timeout'	=> $sleep,
-	) ;
+Run a command:
 
+    $app->run(
+        'cmd'         => "perl t/test/runtest.pl", 
+    ) ;
+
+Run a command and get a callback for each line of output:
+    
+    $app->run(
+        'cmd'         => "perl t/test/runtest.pl", 
+        'progress'    => \&progress,
+    ) ;
+
+Ping a machine for 10 seconds and use a callback routine to check the replies:
+
+    my $run_for = 10 ;
+    my $host = '192.168.0.1' ;
+    my $run = $app->run() ;
+    $run->run_cmd("ping", 
+        'progress' => \&progress,
+        'args'     => "$host",
+        'timeout'  => $run_for,
+    ) ;
+
+Note the above example uses the B<run> feature object to access it's methods directly.
 
 =cut
 
 use strict ;
 use Carp ;
 
-our $VERSION = "1.003" ;
+use File::Which ;
 
-# TODO: 1. Add methods to create args; specify command as ($cmd, $args)
-# TODO: 2. Allow args to be specified as format string+array, or just array?
-# TODO: 2. Post-process results lines (call external hooks); allow option to set list of error line regexps
+our $VERSION = "1.006" ;
 
 #============================================================================================
 # USES
@@ -71,6 +176,8 @@ our @ISA = qw(App::Framework::Feature) ;
 #============================================================================================
 # GLOBALS
 #============================================================================================
+
+our $ON_ERROR_DEFAULT = 'fatal' ;
 
 =head2 Fields
 
@@ -90,6 +197,30 @@ When specified causes the program to be run as a forked child
 
 =item B<nice> - optional nice level
 
+On operating systems that allow this, runs the external command at the specified "nice" level
+
+=item B<on_error> - what to do when a program fails
+
+When this field is set to something other than 'status' it causes an error to be thrown. The default 'status' 
+just returns with the error information stored in the object fields (i.e. 'status', 'results' etc). This field may be set to:
+
+=over 4
+
+=item I<status> - error information returned in fields
+
+=item I<warning> - throw a warning with the message string indicating the error 
+
+=item I<fatal> - [default] throw a fatal error (and abort the script) with the message string indicating the error 
+
+=back
+
+=item B<required> - required programs check
+
+This is a HASH ref where the keys are the names of the required programs. When reading the field, the values 
+are set to the path for that program. Where a program is not found then it's path is set to undef.
+
+See L</required> method.
+
 
 =item B<check_results> - optional results check subroutine
 
@@ -98,7 +229,12 @@ results check subroutine which should be of the form:
     check_results($results_aref)
 
 Where:
-    $results_aref = ARRAY ref to all lines of text
+
+=over 4
+
+=item I<$results_aref> = ARRAY ref to all lines of text
+
+=back
 
 Subroutine should return 0 = results ok; non-zero for program failed.
 
@@ -106,14 +242,20 @@ Subroutine should return 0 = results ok; non-zero for program failed.
 
 progress subroutine which should be in the form:
 
- progress($line, $linenum, $state_href)
+    progress($line, $linenum, $state_href)
 					   
 Where:
-     $line = line of text
-     $linenum = line number (starting at 1)
-     $state_href = An empty HASH ref (allows progress routine to store variables between calls)
+
+=over 4
+
+=item I<$line> = line of text
+
+=item I<$linenum> = line number (starting at 1)
+
+=item I<$state_href> = An empty HASH ref (allows progress routine to store variables between calls)
 					     
-					     
+=back		
+			     
 =item B<status> - Program exit status
 
 Reads as the program exit status
@@ -137,6 +279,10 @@ my %FIELDS = (
 	'args'		=> undef,
 	'timeout'	=> undef,
 	'nice'		=> undef,
+	
+	'on_error'	=> $ON_ERROR_DEFAULT,
+	'error_str'	=> "",
+	'required'	=> {},
 	
 	'check_results'	=> undef,
 	'progress'		=> undef,
@@ -218,7 +364,7 @@ sub init_class
 
 =back
 
-=head2 OBJECT METHODS
+=head2 OBJECT DATA METHODS
 
 =over 4
 
@@ -228,45 +374,149 @@ sub init_class
 
 #-----------------------------------------------------------------------------
 
-=item B<access([%args])>
+=item B<required([$required_href])>
 
-Provides access to the feature. Operates in two modes:
+Get/set the required programs list. If specified, B<$required_href> is a HASH ref where the 
+keys are the names of the required programs (the values are unimportant).
 
-* if no arguments are provided, returns the feature object
-* if arguments are provided, calls the 'run()' method, then returns the object
+This method returns the B<$required_href> HASH ref having set the values associated with the
+program name keys to the path for that program. Where a program is not found then
+it's path is set to undef.
+
+Also, if the L</on_error> field is set to 'warning' or 'fatal' then this method throws a warning
+or fatal error if one or more required programs are not found. Sets the message string to indicate 
+which programs were not found. 
 
 =cut
 
-sub access
+sub required
 {
 	my $this = shift ;
-	my (%args) = @_ ;
+	my ($new_required_href) = @_ ;
 	
-	$this->run(%args) if %args ;
-	return $this ;
+	my $required_href = $this->SUPER::required($new_required_href) ;
+	if ($new_required_href)
+	{
+		## Test for available executables
+		foreach my $exe (keys %$new_required_href)
+		{
+			$required_href->{$exe} = which($exe) ;
+		}
+		
+		## check for errors
+		my $throw = $this->_throw_on_error ;
+		if ($throw)
+		{
+			my $error = "" ;
+			foreach my $exe (keys %$new_required_href)
+			{
+				if (!$required_href->{$exe})
+				{
+					$error .= "  $exe\n" ;
+				}
+			}
+			
+			if ($error)
+			{
+				$this->$throw("The following programs are required but not available:\n$error\n") ;
+			}
+		}
+	}
+	
+	return $required_href ;
 }
+
+
+#============================================================================================
+
+=back
+
+=head2 OBJECT METHODS
+
+=over 4
+
+=cut
+
+#============================================================================================
 
 #--------------------------------------------------------------------------------------------
 
-=item B<run([%args])>
+=item B<run( [args] )>
 
-Execute a command, return exit status (0=success)
+Execute a command if B<args> are specified. Whether B<args> are specified or not, always returns the run object. 
+
+This method has reasonably flexible arguments which can be one of:
+
+=item (%args)
+
+The args HASH contains the information needed to set the L</FIELDS> and then run teh command for example:
+
+  ('cmd' => 'ping', 'args' => $host) 
+
+=item ($cmd)
+
+You can specify just the command string. This will be treated as if you had called the function with:
+
+  ('cmd' => $cmd) 
+
+=item ($cmd, $args)
+
+You can specify the command string and the arguments string. This will be treated as if you had called the function with:
+
+  ('cmd' => $cmd, 'args' => $args) 
+
+NOTE: Need to get B<run> object from application to access this method. This can be done as one of:
+
+  $app->run()->run(.....);
+  
+  or
+  
+  my $run = $app->run() ;
+  $run->run(....) ;
 
 =cut
 
 sub run
 {
 	my $this = shift ;
-	my (%args) = @_ ;
+	my (@args) = @_ ;
 
 	# See if this is a class call
 	$this = $this->check_instance() ;
 
-$this->prt_data("run() this=", $this) if $this->debug()>=10 ;
-$this->prt_data("run() args=", \%args) if $this->debug() ;
+$this->_dbg_prt(["run() this=", $this], 0) ;
+$this->_dbg_prt(["run() args=", \@args]) ;
+
+	my %args ;
+	if (@args == 1)
+	{
+		$args{'cmd'} = $args[0] ;
+	}
+	elsif (@args == 2)
+	{
+		if ($args[0] ne 'cmd')
+		{
+			# not 'cmd' => '....' so treat as ($cmd, $args)
+			$args{'cmd'} = $args[0] ;
+			$args{'args'} = $args[1] ;
+		}
+		else
+		{
+			%args = (@args) ;
+		}
+	}
+	else
+	{
+		%args = (@args) ;
+	}
+	
+	## return immediately if no args
+	return $this unless %args ;
+	
 	
 	# Set any specified args
-	$this->set(%args) ;
+	$this->set(%args) if %args ;
+	
 
 	# Get command
 	my $cmd = $this->cmd() ;
@@ -281,14 +531,15 @@ $this->prt_data("run() args=", \%args) if $this->debug() ;
 	
 	
 	# clear vars
-	$this->status(0) ;
-	$this->results([]) ;
+	$this->set(
+		'status'	=> 0,
+		'results'	=> [],
+		'error_str'	=> "",
+	) ;
+	
 
 	# Check arguments
-	my $args = $this->check_args() ;
-
-#	# If specified, use logging output
-#	$this->log("== Run: $cmd $args ==\n") ;
+	my $args = $this->_check_args() ;
 
 	# Run command and save results
 	my @results ;
@@ -306,127 +557,97 @@ $this->prt_data("run() args=", \%args) if $this->debug() ;
 		($rc, @results) = $this->_run_cmd($cmd, $args) ;		
 	}
 
-#	# If specified, use logging output
-#	$this->log(@results) ;
-	
 	# Update vars
 	$this->status($rc) ;
 	chomp foreach (@results) ;
 	$this->results(\@results) ;
 	
-	return($rc) ;
-}
-
-#--------------------------------------------------------------------------------------------
-
-=item B<run_results([%args])>
-
-Execute a command, return output lines
-
-=cut
-
-sub run_results
-{
-	my $this = shift ;
-	my (%args) = @_ ;
-
-	$this->run(%args) ;
-	
-	return(@{$this->results()}) ;
-}
-
-
-#--------------------------------------------------------------------------------------------
-
-=item B<run_cmd($cmd, [%args])>
-
-Execute a specified command, return exit status (0=success)
-
-=cut
-
-sub run_cmd
-{
-	my $this = shift ;
-	my ($cmd, %args) = @_ ;
-	
-	return $this->run('cmd' => $cmd, %args) ;
-}
-
-#--------------------------------------------------------------------------------------------
-
-=item B<run_cmd_results($cmd, [%args])>
-
-Execute a specified command, return output lines
-
-=cut
-
-sub run_cmd_results
-{
-	my $this = shift ;
-	my ($cmd, %args) = @_ ;
-
-	$this->run_cmd($cmd, %args) ;
-	
-	return(@{$this->results()}) ;
-}
-
-#--------------------------------------------------------------------------------------------
-
-=item B<clear_args()>
-
-Clear out command args (ready for calls of the add_args method)
-
-=cut
-
-sub clear_args
-{
-	my $this = shift ;
-
-	my $args = $this->args('') ;
-
-	return $args ;
-}
-
-#--------------------------------------------------------------------------------------------
-
-=item B<add_args($args)>
-
-Add arguments from parameter $args.
-
-If $args is scalar, append to existing arguments with a preceding space
-If $args is an array, append each to args
-If $args is a hash, append the args as an 'option' / 'value' pair. If 'value' is not defined, then just set the option.
-
-=cut
-
-sub add_args
-{
-	my $this = shift ;
-	my ($arg_ref) = @_ ;
-
-	my $args = $this->args() ;
-	
-	if (ref($arg_ref) eq 'SCALAR')
+	## Handle non-zero exit status
+	my $throw = $this->_throw_on_error ;
+	if ($throw)
 	{
-		
+		my $results = join("\n", @results) ;
+		my $error_str = $this->error_str ;
+		$this->$throw("Command \"$cmd $args\" exited with non-zero error status $rc : $error_str\n$results\n") ;
 	}
 	
-$this->throw_fatal("Method not implemented") ;
-
-	return $args ;
+	return($this) ;
 }
 
+#----------------------------------------------------------------------------
 
+=item B< Run([%args]) >
 
-#--------------------------------------------------------------------------------------------
-
-=item B<check_args()>
-
-Ensure arguments are correct
+Alias to L</run>
 
 =cut
 
-sub check_args
+*Run = \&run ;
+
+#--------------------------------------------------------------------------------------------
+
+=item B<print_run([args])>
+
+DEBUG: Display the full command line as if it was going to be run
+
+NOTE: Need to get B<run> object from application to access this method. 
+
+=cut
+
+sub print_run
+{
+	my $this = shift ;
+	my (@args) = @_ ;
+
+	# See if this is a class call
+	$this = $this->check_instance() ;
+
+	my %args ;
+	if (@args == 1)
+	{
+		$args{'cmd'} = $args[0] ;
+	}
+	elsif (@args == 2)
+	{
+		if ($args[0] ne 'cmd')
+		{
+			# not 'cmd' => '....' so treat as ($cmd, $args)
+			$args{'cmd'} = $args[0] ;
+			$args{'args'} = $args[1] ;
+		}
+		else
+		{
+			%args = (@args) ;
+		}
+	}
+	else
+	{
+		%args = (@args) ;
+	}
+	
+	# Set any specified args
+	$this->set(%args) if %args ;
+
+	# Get command
+	my $cmd = $this->cmd() ;
+	$this->throw_fatal("command not specified") unless $cmd ;
+	
+	# Check arguments
+	my $args = $this->_check_args() ;
+
+	print "$cmd $args\n" ;
+}
+
+
+# ============================================================================================
+# PRIVATE METHODS
+# ============================================================================================
+
+#--------------------------------------------------------------------------------------------
+#
+# Ensure arguments are correct
+#
+sub _check_args
 {
 	my $this = shift ;
 
@@ -441,39 +662,6 @@ sub check_args
 	return $args ;
 }
 
-#--------------------------------------------------------------------------------------------
-
-=item B<print_run([%args])>
-
-Display the full command line as if it was going to be run
-
-=cut
-
-sub print_run
-{
-	my $this = shift ;
-	my (%args) = @_ ;
-
-	# See if this is a class call
-	$this = $this->check_instance() ;
-
-	# Set any specified args
-	$this->set(%args) ;
-
-	# Get command
-	my $cmd = $this->cmd() ;
-	$this->throw_fatal("command not specified") unless $cmd ;
-	
-	# Check arguments
-	my $args = $this->check_args() ;
-
-	print "$cmd $args\n" ;
-}
-
-
-# ============================================================================================
-# PRIVATE METHODS
-# ============================================================================================
 
 #----------------------------------------------------------------------
 # Run command with no timeout
@@ -483,7 +671,7 @@ sub _run_cmd
 	my $this = shift ;
 	my ($cmd, $args) = @_ ;
 
-print "_run_cmd($cmd) args=$args\n" if $this->debug() ;
+$this->_dbg_prt("_run_cmd($cmd) args=$args\n") ;
 	
 	my @results ;
 #	@results = `$cmd $args` unless $this->option('norun') ;
@@ -523,7 +711,7 @@ sub _run_timeout
 	my $this = shift ;
 	my ($cmd, $args, $timeout) = @_ ;
 
-print "_run_timeout($cmd) timeout=$timeout args=$args\n" if $this->debug() ;
+$this->_dbg_prt("_run_timeout($cmd) timeout=$timeout args=$args\n") ;
 
 	# Run command and save results
 	my @results ;
@@ -549,7 +737,7 @@ print "_run_timeout($cmd) timeout=$timeout args=$args\n" if $this->debug() ;
 	eval 
 	{
 		alarm($timeout) if $timeout;
-		$pid = open my $proc, "$cmd $args |" or die "Error: Unable to fork $cmd : $!" ;
+		$pid = open my $proc, "$cmd $args |" or $this->throw_fatal("Unable to fork $cmd : $!") ;
 
 		while(<$proc>)
 		{
@@ -615,6 +803,28 @@ sub _check_results
 	}
 
 	return $rc ;
+}
+
+
+#----------------------------------------------------------------------
+# If the 'on_error' setting is not 'status' then return the "throw" type
+#
+sub _throw_on_error
+{
+	my $this = shift ;
+	
+	my $throw = "";
+	my $on_error = $this->on_error() || $ON_ERROR_DEFAULT ;
+	if ($on_error ne 'status')
+	{
+		$throw = 'throw_fatal' ;
+		if ($on_error =~ m/warn/i)
+		{
+			$throw = 'throw_warning' ;
+		}
+	}
+
+	return $throw ;
 }
 
 # ============================================================================================

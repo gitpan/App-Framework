@@ -466,7 +466,39 @@ For further details, and more advanced configurations, see L<App::Framework::Fea
 
 =head3 Running external programs
 
-B<THIS SECTION TO BE COMPLETED>
+You use the B<Run> feature to execute external programs. First, you should specify which programs you want to run in the script. This
+step is not necessary, but it checks up front that all the programs you want to use are actually installed:
+
+   use App::Framework '+Run'
+   
+   ...
+   
+   my $run = $app->run ;
+
+   # get the framework to abort if some programs are not installed
+   $run->on_error('fatal') ;
+   
+   # check your programs
+   $run->required(
+      {
+          'lsvob'      => 1,
+          'ffmpeg'     => 1,
+          'transcode'  => 1,
+          'vlc'        => 1,	
+      },
+   ) ;
+
+Once you know you can use the programs, you call them as (for example):
+
+   my $status = $app->run("ffmpeg", "-i move.avi movie.mpeg") ;
+
+where the returned value is 0 for success; non-zero for program error code.
+
+You can also get the program output by:
+
+  my $results_aref = $app->run->results ;
+
+which returns an ARRAY ref of lines of text output. 
 
 For further details see L<App::Framework::Feature::Run>
 

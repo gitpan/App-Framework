@@ -21,7 +21,7 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "2.014" ;
+our $VERSION = "2.015" ;
 
 #============================================================================================
 # USES
@@ -420,6 +420,35 @@ sub set
 
 #============================================================================================
 
+#----------------------------------------------------------------------------
+
+=item B< sql([%args]) >
+
+Returns the sql object. If %args are specified they are used to set the L</FIELDS>
+
+=cut
+
+sub sql
+{
+	my $this = shift ;
+	my (%args) = @_ ;
+
+	$this->set(%args) if %args ;
+	return $this ;
+}
+
+#----------------------------------------------------------------------------
+
+=item B< Sql([%args]) >
+
+Alias to L</sql>
+
+=cut
+
+*Sql = \&sql ;
+
+
+
 
 #----------------------------------------------------------------------------
 
@@ -523,7 +552,7 @@ sub connect
 
 	$this->set(%args) ;
 
-	print "Sql::connect() => ".$this->database()."\n" if $this->debug() ;
+	$this->_dbg_prt("Sql::connect() => ".$this->database()."\n") ;
 
 	my $dbh ;
 	eval
@@ -548,7 +577,7 @@ sub connect
 		$this->throw_fatal("SQL connect error: $@", 1000) ;
 	}
 	
-	print " + connected dbh=$dbh : db=".$this->database()." user=".$this->user()." pass=".$this->password()."\n" if $this->debug() ;
+	$this->_dbg_prt(" + connected dbh=$dbh : db=".$this->database()." user=".$this->user()." pass=".$this->password()."\n") ;
 	
 	return $dbh ;
 }
@@ -567,7 +596,7 @@ sub disconnect
 
 	my $dbh = $this->dbh() ;
 
-	print "Sql::disconnect() => dbh=$dbh\n" if $this->debug() ;
+	$this->_dbg_prt("Sql::disconnect() => dbh=$dbh\n") ;
 
 	eval
 	{
@@ -583,7 +612,7 @@ sub disconnect
 		$this->throw_fatal("SQL disconnect error: $@", 1000) ;
 	}
 
-	print " + disconnected\n" if $this->debug() ;
+	$this->_dbg_prt(" + disconnected\n") ;
 }
 
 
@@ -676,12 +705,12 @@ sub sth_create
 	# Default table name
 	$vars{'sqlvar_table'} = $vars{'table'} ;
 
-print "sth_create($name)\n" if $this->debug()>=2 ;
+$this->_dbg_prt("sth_create($name)\n", 2) ;
 	
 	## Guess command based on name
 	my $cmd = $this->_sql_cmd($name) ;
 
-print " + cmd=$cmd\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + cmd=$cmd\n", 2) ;
 	
 	## Handle hash
 	if (ref($spec) eq 'HASH')
@@ -696,7 +725,7 @@ print " + cmd=$cmd\n" if $this->debug()>=2 ;
 		$cmd = lc $cmd ;
 
 		# error check
-		$this->throw_fatal("Error: No valid sql command") unless $cmd ;
+		$this->throw_fatal("No valid sql command") unless $cmd ;
 
 		# Process spec - set vars
 		$this->_sql_setvars($cmd, \%spec, \%vars) ;
@@ -707,9 +736,9 @@ print " + cmd=$cmd\n" if $this->debug()>=2 ;
 		$this->_sql_setvars($cmd || 'query', $spec, \%vars) ;
 	}
 
-$this->prt_data("Vars=", \%vars) if $this->debug()>=2 ;
+$this->_dbg_prt(["Vars=", \%vars], 2) ;
 
-print "+ expand vars\n" if $this->debug()>=2 ;
+$this->_dbg_prt("+ expand vars\n", 2) ;
 
 	## Run through all vars and expand them
 	$this->_sql_expand_vars(\%vars) ;
@@ -809,7 +838,7 @@ sub sth_query
 
 		
 
-		$this->prt_data("Sql::sth_query($query) : args=", \@args, "vals=", \@vals) if $this->debug()>=2 ;
+		$this->_dbg_prt(["Sql::sth_query($query) : args=", \@args, "vals=", \@vals], 2) ;
 		
 		# execute
 		eval
@@ -822,7 +851,7 @@ sub sth_query
 			$this->throw_fatal("STH \"$name\"execute error $@\nQuery=$query\nValues=$vals", 1) if $@ ;
 		}
 	
-#		print "Sql::sth_query($query) => sth=$sth\n" if $this->debug()>=2 ;
+#		$this->_dbg_prt("Sql::sth_query($query) => sth=$sth\n", 2) ;
 			
 		# Save handle for later
 #		$this->_result($sth) ;
@@ -969,7 +998,7 @@ sub next
 	my $sth = $this->_sth_record_sth($name) ;
 	my $href = $sth->fetchrow_hashref() ;
 
-	print "Sql::next() => sth=$sth : record=".$href."\n" if $this->debug() ;
+	$this->_dbg_prt("Sql::next() => sth=$sth : record=".$href."\n") ;
 	
 	return $href ;
 
@@ -979,7 +1008,7 @@ sub next
 #	# Get row and save it
 #	$this->_record($sth->fetchrow_hashref() || 0) ;
 #
-#	print "Sql::next() => sth=$sth : record=".$this->_record()."\n" if $this->debug() ;
+#	$this->_dbg_prt("Sql::next() => sth=$sth : record=".$this->_record()."\n") ;
 #	
 #	# return result
 #	return ($this->_record() || undef) ;
@@ -1300,7 +1329,7 @@ sub _sql_setvars
 	my $this = shift ;
 	my ($context, $spec, $vars_href) = @_ ;
 
-print " > _sql_setvars($context)\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > _sql_setvars($context)\n", 2) ;
 
 
 	## Start by getting control info from %CMD_SQL if possible
@@ -1322,7 +1351,7 @@ print " > _sql_setvars($context)\n" if $this->debug()>=2 ;
 		$vars_href->{"\@${var}"} = $CMD_SQL{$context}{'vals'} if exists($CMD_SQL{$context}{'vals'}) ; 
 	}
 
-print " > + var=$var format=$format\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + var=$var format=$format\n", 2) ;
 
 	## Handle hash
 	if (ref($spec) eq 'HASH')
@@ -1377,12 +1406,12 @@ print " > + var=$var format=$format\n" if $this->debug()>=2 ;
 			my $array_name = "\@${var}_vals" ;
 			$vars_href->{$array_name} = [] ; 
 
-print " > + + VALS : array=$array_name, vals_ref=$vals_ref\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + + VALS : array=$array_name, vals_ref=$vals_ref\n", 2) ;
 
 
 			if (ref($vals_ref) eq 'ARRAY')
 			{
-print " > + + + adding array\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + + + adding array\n", 2) ;
 				foreach (my $idx=0; $idx < scalar(@$vals_ref); ++$idx)
 				{
 					## Store the HASH ref for ALL variables. Then, when we access the values, they will be the latest
@@ -1395,10 +1424,10 @@ print " > + + + adding array\n" if $this->debug()>=2 ;
 			}
 			elsif (ref($vals_ref) eq 'HASH')
 			{
-print " > + + + adding hash\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + + + adding hash\n", 2) ;
 				foreach my $var (@$vars_aref)
 				{
-print " > + + + + $var=$vars_href->{$var}\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + + + + $var=$vars_href->{$var}\n", 2) ;
 #					$vals_ref->{$var} ||= '' ;
 #					push @{$vars_href->{$array_name}}, \$vals_ref->{$var} ; 
 
@@ -1419,13 +1448,13 @@ print " > + + + + $var=$vars_href->{$var}\n" if $this->debug()>=2 ;
 			$format = delete $spec{'sql'} ;
 		}
 
-print " > + processing hash ...\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + processing hash ...\n", 2) ;
 #$this->prt_data("spec=", \%spec) ;
 		
 		## cycle through the other hash keys to produce other variables
 		foreach my $var (keys %spec)
 		{
-print " > + + $var = $spec{$var}\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + + $var = $spec{$var}\n", 2) ;
 
 			$this->_sql_setvars($var, $spec{$var}, $vars_href) ;
 		}
@@ -1438,12 +1467,12 @@ print " > + + $var = $spec{$var}\n" if $this->debug()>=2 ;
 		## String
 		$format = $spec ;
 		
-print " > + spec is string : format=$format\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + spec is string : format=$format\n", 2) ;
 
 
 	}
 
-print " > Now: prefix=$prefix , format=$format\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > Now: prefix=$prefix , format=$format\n", 2) ;
 
 
 	## Ensure prefix is present
@@ -1452,7 +1481,7 @@ print " > Now: prefix=$prefix , format=$format\n" if $this->debug()>=2 ;
 		# Use prefix if necessary
 		unless ($format =~ m/^\s*$context/i)
 		{
-print " > + + Adding prefix=$prefix to format=$format\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > + + Adding prefix=$prefix to format=$format\n", 2) ;
 			$format = "$prefix $format" ;
 		}
 	}
@@ -1460,7 +1489,7 @@ print " > + + Adding prefix=$prefix to format=$format\n" if $this->debug()>=2 ;
 	# Set var
 	$vars_href->{$var} = $format ;
 
-print " > _sql_setvars($context) - END [format=$format]\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" > _sql_setvars($context) - END [format=$format]\n", 2) ;
 
 }
 
@@ -1477,8 +1506,8 @@ sub _sql_expand_vars
 	my $this = shift ;
 	my ($vars_href) = @_ ;
 
-print "_sql_expand_vars()\n" if $this->debug()>=2 ;
-$this->prt_data("vars", \$vars_href) if $this->debug()>=2 ;
+$this->_dbg_prt("_sql_expand_vars()\n", 2) ;
+$this->_dbg_prt(["vars", \$vars_href], 2) ;
 
 
 	# do all vars in HASH
@@ -1490,13 +1519,13 @@ $this->prt_data("vars", \$vars_href) if $this->debug()>=2 ;
 		# skip if empty
 		next unless $vars_href->{$var} ;
 
-print " + $var\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + $var\n", 2) ;
 		
 		# Keep replacing until all variables have been expanded
 		my $ix = index $vars_href->{$var}, '$' ;
 		while ($ix >= 0)
 		{
-print " + + ix=$ix : $var = $vars_href->{$var}\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + + ix=$ix : $var = $vars_href->{$var}\n", 2) ;
 
 
 			# At least 1 more variable to replace, so replace it
@@ -1515,12 +1544,12 @@ print " + + ix=$ix : $var = $vars_href->{$var}\n" if $this->debug()>=2 ;
 
 		$ix = index $vars_href->{$var}, '$' ;
 
-print " + + + $var = $vars_href->{$var}\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + + + $var = $vars_href->{$var}\n", 2) ;
 			
 		}
 	}
 
-print "_sql_expand_vars - END\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_sql_expand_vars - END\n", 2) ;
 
 }
 
@@ -1537,13 +1566,13 @@ sub _sql_expand_arrays
 	my $this = shift ;
 	my ($vars_href) = @_ ;
 
-print "_sql_expand_arrays()\n" if $this->debug()>=2 ;
-$this->prt_data("vars", \$vars_href) if $this->debug()>=2 ;
+$this->_dbg_prt("_sql_expand_arrays()\n", 2) ;
+$this->_dbg_prt(["vars", \$vars_href], 2) ;
 
 	# do all vars in HASH
 	foreach my $var (keys %$vars_href)
 	{
-print " + $var=$vars_href->{$var}\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + $var=$vars_href->{$var}\n", 2) ;
 
 		# skip variables that aren't named @....
 		next unless $var =~ /^\@/ ;
@@ -1555,7 +1584,7 @@ print " + $var=$vars_href->{$var}\n" if $this->debug()>=2 ;
 		$this->_sql_expand_array($var, $vars_href) ;
 	}
 
-print "_sql_expand_arrays() - END\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_sql_expand_arrays() - END\n", 2) ;
 
 }
 
@@ -1572,7 +1601,7 @@ sub _sql_expand_array
 	my $this = shift ;
 	my ($array, $vars_href) = @_ ;
 
-print "_sql_expand_array($array)\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_sql_expand_array($array)\n", 2) ;
 
 	# skip if already an array
 	unless (ref($vars_href->{$array}) eq 'ARRAY')
@@ -1585,27 +1614,27 @@ print "_sql_expand_array($array)\n" if $this->debug()>=2 ;
 			# start array off
 			$vars_href->{$array} = [] ;
 	
-	print " -- setting array\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" -- setting array\n", 2) ;
 	
 			# process them
 			foreach my $arr (@arr_list)
 			{
-	print " -- -- get $arr\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" -- -- get $arr\n", 2) ;
 	
 				# if reference to another array, evaluate it
 				if ($arr =~ /^\@/)
 				{
-	print " -- -- -- expand $arr\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" -- -- -- expand $arr\n", 2) ;
 					my $arr_aref = $this->_sql_expand_array($arr, $vars_href) ;
 					
-	print " -- -- -- push array $arr=$arr_aref\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" -- -- -- push array $arr=$arr_aref\n", 2) ;
 	
 					# Add to list
 					push @{$vars_href->{$array}}, @$arr_aref if $arr_aref ;
 				}
 				else
 				{
-	print " -- -- -- push value $arr\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" -- -- -- push value $arr\n", 2) ;
 					# Add to list
 					push @{$vars_href->{$array}}, $arr ;
 				}			
@@ -1613,8 +1642,8 @@ print "_sql_expand_array($array)\n" if $this->debug()>=2 ;
 		}
 	}
 
-$this->prt_data("ARRAY $array=", $vars_href->{$array}) if $this->debug()>=2 ;
-print "_sql_expand_array($array) - END\n" if $this->debug()>=2 ;
+$this->_dbg_prt(["ARRAY $array=", $vars_href->{$array}], 2) ;
+$this->_dbg_prt("_sql_expand_array($array) - END\n", 2) ;
 
 	return ($vars_href->{$array}) ;
 }
@@ -1639,13 +1668,13 @@ sub _sth_record
 		$sth_href = $sth_href->{$name} ;
 
 		# error check
-		$this->throw_fatal("Error: sth $name not created") unless $sth_href ;				
+		$this->throw_fatal("sth $name not created") unless $sth_href ;				
 
 	}
 	else
 	{
 		# error
-		$this->throw_fatal("Error: sth $name not created") ;				
+		$this->throw_fatal("sth $name not created") ;				
 	}
 		
 	return $sth_href ;
@@ -1671,14 +1700,12 @@ sub _sth_record_sth
 	{
 		$sth = $sth_href->{'sth'} ;
 
-		# TODO: error
-$this->throw_fatal( "Error: sth $name not created" ) unless $sth ;				
+		$this->throw_fatal("sth $name not created" ) unless $sth ;				
 
 	}
 	else
 	{
-		# TODO: error
-$this->throw_fatal( "Error: sth $name not created" ) ;				
+		$this->throw_fatal("sth $name not created" ) ;				
 	}
 		
 	return $sth ;

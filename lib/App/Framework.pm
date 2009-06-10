@@ -131,7 +131,7 @@ can also be provided with a script.
 
 =head2 Framework Components 
 
-The diagram below shows the relationship between the application framework object (Framework) and the other components: the framework derives
+The diagram below shows the relationship between the application framework object (Framework) and the other components: 
 
     +--------------+
     | Core         |
@@ -465,7 +465,7 @@ use Carp ;
 use App::Framework::Core ;
 
 
-our $VERSION = "0.94" ;
+our $VERSION = "0.95" ;
 
 
 #============================================================================================
@@ -485,7 +485,7 @@ my $import_args ;
 
 #============================================================================================
 
-=head2 CONSTRUCTOR
+=head2 METHODS
 
 =over 4
 

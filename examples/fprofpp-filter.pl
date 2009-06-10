@@ -182,7 +182,7 @@ Sort output on total time in function
 
 [DESCRIPTION]
 
-B<$name> filters Devel::FastProf outpu
+B<$name> filters Devel::FastProf output
 
 	# fprofpp output format is:
 	# filename:line time count: source

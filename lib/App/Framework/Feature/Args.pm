@@ -226,10 +226,14 @@ alternative is to call the args accessor method directly. These alternatives are
         my @args = $app->args() ;
         $infile = $args[0] ;
         
+        # access alias
+        @args = $app->Args() ;
+        $infile = $args[0] ;
+
         ($infile) = $app->args('infile') ;
         
         # feature object
-        @args = $app->feature('Args')->access() ;
+        @args = $app->feature('Args')->args() ;
         $infile = $args[0] ;
     }
 
@@ -321,7 +325,7 @@ filenames and STDIN will then be used.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.004" ;
+our $VERSION = "1.005" ;
 
 #============================================================================================
 # USES
@@ -346,7 +350,7 @@ The following fields should be defined either in the call to 'new()', as part of
 
 =over 4
 
-=item B<args> - list of argument definitions
+=item B<user_args> - list of argument definitions
 
 Created by the object. Once all of the arguments have been created, this field contains an ARRAY ref to the list
 of all of the specified option specifications (see method L</append_args>).
@@ -366,7 +370,7 @@ Reference to @ARGV array.
 
 my %FIELDS = (
 	## User specified
-	'args'		=> [],		# User-specified args
+	'user_args'		=> [],		# User-specified args
 	'argv'		=> [],		# ref to @ARGV
 	'arg_names'	=> [],		# List of arg names
 
@@ -408,8 +412,8 @@ sub new
 
 
 my $args = $this->feature_args() ;
-$this->prt_data("NEW: feature args=", $args) if $this->debug ;
-$this->prt_data("OBJ=", $this) if $this->debug ;
+$this->_dbg_prt(["NEW: feature args=", $args]) ;
+$this->_dbg_prt(["OBJ=", $this]) ;
 	
 	return($this) ;
 }
@@ -464,7 +468,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item B< access([$name]) >
+=item B< args([$name]) >
 
 When called with no arguments, returns the full arguments list (same as call to method L</arg_list>).
 
@@ -473,7 +477,7 @@ argument values as a list; otherwise just returns the complete args list.
 
 =cut
 
-sub access
+sub args
 {
 	my $this = shift ;
 	my (@names) = @_ ;
@@ -496,6 +500,17 @@ sub access
 	
 	return @args ;
 }
+
+#----------------------------------------------------------------------------
+
+=item B< Args([$name]) >
+
+Alias to L</args>
+
+=cut
+
+*Args = \&args ;
+
 
 #----------------------------------------------------------------------------
 
@@ -545,13 +560,13 @@ sub append_args
 	my $this = shift ;
 	my ($args_aref) = @_ ;
 
-print "Args: append_args()\n" if $this->debug() ;
+$this->_dbg_prt("Args: append_args()\n") ;
 
-	my @combined_args = (@{$this->args}, @$args_aref) ;
-	$this->args(\@combined_args) ;
+	my @combined_args = (@{$this->user_args}, @$args_aref) ;
+	$this->user_args(\@combined_args) ;
 
-$this->prt_data("Options: append_args() new=", $args_aref) if $this->debug()>=2 ;
-$this->prt_data("combined=", \@combined_args) if $this->debug()>=2 ;
+$this->_dbg_prt(["Options: append_args() new=", $args_aref], 2)   ;
+$this->_dbg_prt(["combined=", \@combined_args], 2)   ;
 
 	## Build new set of args
 	$this->update() ;
@@ -578,10 +593,10 @@ sub update
 {
 	my $this = shift ;
 
-print "Args: update()\n" if $this->debug() ;
+$this->_dbg_prt("Args: update()\n") ;
 
 	## get user settings
-	my $args_aref = $this->args ;
+	my $args_aref = $this->user_args ;
 
 	## set up internals
 	
@@ -599,7 +614,7 @@ print "Args: update()\n" if $this->debug() ;
 	my $last_dest_type ;
 	foreach my $arg_entry_aref (@$args_aref)
 	{
-$this->prt_data("Arg entry=", $arg_entry_aref) if $this->debug()>=2 ;
+$this->_dbg_prt(["Arg entry=", $arg_entry_aref], 2)   ;
 
 		my ($arg_spec, $summary, $description, $default_val) = @$arg_entry_aref ;
 		
@@ -625,19 +640,19 @@ $this->prt_data("Arg entry=", $arg_entry_aref) if $this->debug()>=2 ;
 		}		
 		$optional ||= $arg_optional ;
 
-print "Args: update() - arg_optional=$arg_optional optional=$optional\n" if $this->debug() ;
+$this->_dbg_prt("Args: update() - arg_optional=$arg_optional optional=$optional\n") ;
 		
 		# Create full entry
 		my $href = $this->_new_arg_entry($name, $arg_spec, $summary, $description, $default_val, $pod_spec, $arg_type, $arg_direction, $dest_type, $optional, $arg_append, $arg_mode) ;
 		$args_names_href->{$name} = $href ;
 
-$this->prt_data("Arg $name HASH=", $href) if $this->debug()>=2 ;
+$this->_dbg_prt(["Arg $name HASH=", $href], 2)   ;
 
 		# save arg in specified order
 		push @$args_list, $name ; 
 	}
 
-print "args() - END\n" if $this->debug()>=2 ;
+$this->_dbg_prt("update() - END\n", 2) ;
 
 	## Save
 	$this->arg_names($args_list) ;
@@ -671,7 +686,7 @@ sub check_args
 	# File handles
 	my $fh_aref = $this->_fh_list() ;
 
-$this->prt_data("check_args() Names=", $arg_names_href, "Values=", $args_href, "Name list=", $this->arg_names()) if $this->debug()>=2 ;
+$this->_dbg_prt(["check_args() Names=", $arg_names_href, "Values=", $args_href, "Name list=", $this->arg_names()], 2)   ;
 	
 		
 	## Check feature settings
@@ -728,7 +743,7 @@ $this->prt_data("check_args() Names=", $arg_names_href, "Values=", $args_href, "
 		## Special handling for @* spec
 		if ($arg_names_href->{$name}{'dest_type'})
 		{
-	print " + + special dest type\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" + + special dest type\n", 2) ;
 			if (defined($value))
 			{
 				@values = @$value ;
@@ -742,7 +757,7 @@ $this->prt_data("check_args() Names=", $arg_names_href, "Values=", $args_href, "
 			}
 		}
 
-print " + values (@values) [".scalar(@values)."]\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + values (@values) [".scalar(@values)."]\n", 2) ;
 
 		## Very special case of * spec with no args - set fh to STDIN if required
 		if ($arg_names_href->{$name}{'dest_type'} eq '*')
@@ -774,7 +789,7 @@ print " + values (@values) [".scalar(@values)."]\n" if $this->debug()>=2 ;
 			++$idx ;
 			my $arg_optional = $arg_names_href->{$name}{'optional'} ;
 			
-print " + checking $name value=$val, type=$type, optional=$arg_optional ..\n" if $this->debug()>=2 ;
+$this->_dbg_prt(" + checking $name value=$val, type=$type, optional=$arg_optional ..\n", 2) ;
 		
 			# First check that an arg has been specified
 			if ($idx >= scalar(@$argv_aref))
@@ -791,7 +806,7 @@ print " + checking $name value=$val, type=$type, optional=$arg_optional ..\n" if
 			## Input
 			if ($arg_names_href->{$name}{'direction'} eq 'i')
 			{
-	print " + Check $val for existence\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" + Check $val for existence\n", 2) ;
 				
 				## skip checks if optional and no value specified (i.e. do the check if a default is specified)
 				if (!$arg_optional && $val)
@@ -809,7 +824,7 @@ print " + checking $name value=$val, type=$type, optional=$arg_optional ..\n" if
 				}
 				else
 				{
-	print " + Skipped checks opt=$arg_optional val=$val bool=".."...\n" if $this->debug()>=2 ;
+	$this->_dbg_prt(" + Skipped checks opt=$arg_optional val=$val bool=".."...\n", 2) ;
 					
 				}	
 				
@@ -936,7 +951,7 @@ sub get_args
 	my %args ;
 	
 	%args = $this->arg_hash() ;
-$this->prt_data("Args before expand : hash=", \%args) if $this->debug ;
+$this->_dbg_prt(["Args before expand : hash=", \%args]) ;
 
 	# Expand the args variables
 	$this->_expand_args() ;
@@ -1126,7 +1141,7 @@ sub _process_arg_spec
 	my $this = shift ;
 	my ($arg_spec) = @_ ;
 
-$this->prt_data("arg: _process_arg_spec($arg_spec)") if $this->debug()>=2 ;
+$this->_dbg_prt(["arg: _process_arg_spec($arg_spec)"], 2)   ;
 
 	my $developer_only = 0 ;
 
@@ -1148,7 +1163,7 @@ $this->prt_data("arg: _process_arg_spec($arg_spec)") if $this->debug()>=2 ;
 	{
 		$arg = $1 ;
 	}
-print "args() set: pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_process_arg_spec() set: pod spec=$spec arg=$arg\n", 2) ;
 	
 	my $dest_type = "" ;
 	if ($arg =~ /([\@\*])/i)
@@ -1196,7 +1211,7 @@ print "args() set: pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
 	my $arg_optional = 0 ;
 	if ($arg =~ /\?/i)
 	{
-print "args() set: optional\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_process_arg_spec() set: optional\n", 2) ;
 		$arg_optional = 1 ;
 	}	
 
@@ -1206,7 +1221,7 @@ print "args() set: optional\n" if $this->debug()>=2 ;
 		$arg_mode = 'b' ;
 	}
 	
-print "args() set: final pod spec=$spec arg=$arg\n" if $this->debug()>=2 ;
+$this->_dbg_prt("_process_arg_spec() set: final pod spec=$spec arg=$arg\n", 2) ;
 				
 	return ($name, $arg_spec, $spec, $dest_type, $arg_type, $arg_direction, $arg_optional, $arg_append, $arg_mode) ;
 }

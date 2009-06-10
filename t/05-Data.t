@@ -85,7 +85,7 @@ my %NAMED = (
 #	'data3' => $NAMED3,
 ) ;
 	
-	plan tests => 2 * (keys %NAMED) ;
+	plan tests => 2 * 2 * (keys %NAMED) ;
 
 $App::Framework::Base::class_debug = 2 ;
 
@@ -132,6 +132,9 @@ print "test string : $which\n" ;
 	my $expected = $NAMED{$which} ;
 	chomp $expected ; 
 	is($named, $expected, "check $which text") ;
+
+	$named = $app->Data($which) ;
+	is($named, $expected, "check $which text (alias access)") ;
 }
 
 #----------------------------------------------------------------------
@@ -147,6 +150,10 @@ print "test array : $which\n" ;
 	my @named = $app->data($which) ;
 	
 	is_deeply(\@named, \@NAMED, "check $which array") ;
+
+
+	@named = $app->Data($which) ;
+	is_deeply(\@named, \@NAMED, "check $which array (alias access)") ;
 }
 
 

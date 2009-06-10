@@ -158,8 +158,12 @@ alternative is to call the options accessor method directly. These alternatives 
         my %options = $app->options() ;
         $log = $options{log} ;
         
+        # access alias
+        %options = $app->Options() ;
+        $log = $options{log} ;
+        
         # feature object
-        %options = $app->feature('Options')->access() ;
+        %options = $app->feature('Options')->options() ;
         $log = $options{log} ;
     }
 
@@ -221,7 +225,7 @@ Giving the options HASH values:
 use strict ;
 use Carp ;
 
-our $VERSION = "1.002" ;
+our $VERSION = "1.003" ;
 
 
 #============================================================================================
@@ -250,7 +254,7 @@ The following fields should be defined either in the call to 'new()', as part of
 
 =over 4
 
-=item B<options> - list of options
+=item B<user_options> - list of options
 
 Created by the object. Once all of the options have been created, this field contains an ARRAY ref to the list
 of all of the specified option specifications (see method L</append_options>).
@@ -265,7 +269,7 @@ of all of the option field names.
 =cut
 
 my %FIELDS = (
-	'options'		=> [],		# User-specified options
+	'user_options'	=> [],		# User-specified options
 	'option_names'	=> [],		# List of option names
 
 	'_options'				=> {},	# Final options HASH - key = option name; value = option value
@@ -361,7 +365,7 @@ sub init_class
 
 #----------------------------------------------------------------------------
 
-=item B< access() >
+=item B< options() >
 
 Feature accessor method (aliases on the app object as B<options>)
 
@@ -369,7 +373,7 @@ Returns the hash of options/values
 
 =cut
 
-sub access
+sub options
 {
 	my $this = shift ;
 
@@ -378,6 +382,16 @@ $this->_dbg_prt( ["Options: access()\n"] ) ;
 	my $options_href = $this->_options() ;
 	return %$options_href ;
 }
+
+#----------------------------------------------------------------------------
+
+=item B< Options([%args]) >
+
+Alias to L</options>
+
+=cut
+
+*Options = \&options ;
 
 #----------------------------------------------------------------------------
 
@@ -413,7 +427,7 @@ sub update
 {
 	my $this = shift ;
 
-$this->_dbg_prt( ["Options: update()\n"] ) ;
+$this->_dbg_prt( ["update()\n"] ) ;
 
 if ( $this->debug()>=2 )
 {
@@ -421,7 +435,7 @@ $this->dump_callstack() ;
 }
 
 	## get user settings
-	my $options_aref = $this->options ;
+	my $options_aref = $this->user_options ;
 
 	## set up internals
 	
@@ -522,8 +536,8 @@ $this->dump_callstack() ;
 		# add to list of names
 		push @$option_names_aref, $field ;
 	}
-$this->_dbg_prt( ["options() set: Getopts spec=", $get_options_aref] , 2) ;
-$this->_dbg_prt( ["options() - END\n"], 2 ) ;
+$this->_dbg_prt( ["update() set: Getopts spec=", $get_options_aref] , 2) ;
+$this->_dbg_prt( ["update() - END\n"], 2 ) ;
 
 	## Save
 	$this->_options_list($options_aref) ;
@@ -566,13 +580,13 @@ $this->_dbg_prt( ["Options: append_options()\n"] ) ;
 		$caller_pkg = (caller(0))[0] ;
 	}
 	
-	my @combined_options = (@{$this->options}) ;
+	my @combined_options = (@{$this->user_options}) ;
 	foreach my $opt_aref (@$options_aref)
 	{
 		my @opt = ($opt_aref->[0], $opt_aref->[1], $opt_aref->[2], $opt_aref->[3], $caller_pkg) ;
 		push @combined_options, \@opt ;
 	}
-	$this->options(\@combined_options) ;
+	$this->user_options(\@combined_options) ;
 
 $this->_dbg_prt( ["Options: append_options() new=", $options_aref] , 2) ;
 $this->_dbg_prt( ["combined=", \@combined_options] , 2) ;
@@ -597,7 +611,7 @@ sub clear_options
 
 $this->_dbg_prt( ["Options: clear_options()\n"] ) ;
 
-	$this->options([]) ;
+	$this->user_options([]) ;
 
 }
 
@@ -873,7 +887,7 @@ $this->_dbg_prt( ["option: _process_option_spec($option_spec)"] , 2) ;
 	{
 		$arg = $1 ;
 	}
-$this->_dbg_prt( ["options() set: pod spec=$spec arg=$arg\n"], 2 ) ;
+$this->_dbg_prt( ["_process_option_spec() set: pod spec=$spec arg=$arg\n"], 2 ) ;
 
 	my @fields = split /\|/, $spec ;
 	if (@fields > 1)
@@ -929,7 +943,7 @@ $this->_dbg_prt( ["options() set: pod spec=$spec arg=$arg\n"], 2 ) ;
 		}
 	}
 
-$this->_dbg_prt( ["options() set: final pod spec=$spec arg=$arg\n"], 2 ) ;
+$this->_dbg_prt( ["_process_option_spec() set: final pod spec=$spec arg=$arg\n"], 2 ) ;
 				
 	return ($field, $option_spec, $spec, $dest_type, $developer_only, \@fields, $arg_type) ;
 			

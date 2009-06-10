@@ -222,7 +222,7 @@ that variable:
 
 use strict ;
 
-our $VERSION = "0.10" ;
+our $VERSION = "0.11" ;
 
 #============================================================================================
 # USES
@@ -285,7 +285,7 @@ my %FIELDS = (
 	'filename' 		=> undef,
 	
 	# Created during execution
-	'config'		=> {},
+	'configuration'	=> {},
 	'file_path'		=> undef,
 	'sections'		=> [],
 		
@@ -630,7 +630,7 @@ $this->_dbg_prt( ["Config: current path=",$this->path," filename=",$this->filena
 		
 		my @new_options ;
 
-my $complete_config = $this->config ;
+my $complete_config = $this->configuration ;
 $this->_dbg_prt( ["Config: config=", $complete_config] ) ;
 		
 		## Set default values in options based on the config file
@@ -687,7 +687,7 @@ $this->_dbg_prt( ["Config: application_entry()\n"] ) ;
 	my $app = $this->app ;
 	my $opt = $this->app->feature('Options') ;
 
-	my $config_href = $this->config ;
+	my $config_href = $this->configuration ;
 
 	## Update config from options
 	my $order=1 ;
@@ -746,7 +746,7 @@ $this->_dbg_prt( [" + + Creating new config entry\n"] ) ;
 $this->_dbg_prt( ["write config option. Updated config=", $config_href] ) ;
 		
 	## update
-	$this->config($config_href) ;
+	$this->configuration($config_href) ;
 
 	
 	## Handle special options
@@ -760,6 +760,33 @@ $this->_dbg_prt( ["write config option. Current config=", $config_href] ) ;
 	}
 	
 }
+
+#----------------------------------------------------------------------------
+
+=item B< config([%args]) >
+
+Returns the config object. If %args are specified they are used to set the L</FIELDS>
+
+=cut
+
+sub config
+{
+	my $this = shift ;
+	my (%args) = @_ ;
+
+	$this->set(%args) if %args ;
+	return $this ;
+}
+
+#----------------------------------------------------------------------------
+
+=item B< Config([%args]) >
+
+Alias to L</config>
+
+=cut
+
+*Config = \&config ;
 
 #----------------------------------------------------------------------------
 
@@ -847,7 +874,7 @@ sub add_config
 	my $this = shift ;
 	my (%config) = @_ ;
 
-	my $config_href = $this->config ;
+	my $config_href = $this->configuration ;
 
 	## merge hashes
 	my %merged ;
@@ -859,7 +886,7 @@ sub add_config
 		}
 	}
 
-	$this->config(\%merged) ;
+	$this->configuration(\%merged) ;
 }
 
 #----------------------------------------------------------------------------
@@ -874,7 +901,7 @@ sub clear_config
 {
 	my $this = shift ;
 
-	$this->config({}) ;
+	$this->configuration({}) ;
 }
 
 #----------------------------------------------------------------------------
@@ -962,7 +989,7 @@ sub get_raw_hash
 	my %config ;
 	
 	# start at top
-	my $config_href = $this->config ;
+	my $config_href = $this->configuration ;
 
 	# see if we want a sub-branch
 	if ($name && exists($config_href->{$name}))
@@ -1021,7 +1048,7 @@ sub get_raw_array
 	$name ||= '' ;
 
 	# start at top
-	my $config_href = $this->config ;
+	my $config_href = $this->configuration ;
 
 	# see if we want a sub-branch
 	if ($name && exists($config_href->{$name}))

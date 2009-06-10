@@ -24,7 +24,7 @@ B<DOCUMENTATION TO BE COMPLETED>
 use strict ;
 use Carp ;
 
-our $VERSION = "1.000" ;
+our $VERSION = "1.001" ;
 
 #============================================================================================
 # USES
@@ -275,27 +275,27 @@ sub register_app
 }
 
 
-#-----------------------------------------------------------------------------
-
-=item B< access([%args]) >
-
-Provides access to the feature. This default method is equivalent to:
-
-	$feature->set(%args);
-	return $feature ;
-
-Derived features may override this method to return object data, execute code etc.
-
-=cut
-
-sub access
-{
-	my $this = shift ;
-	my (%args) = @_ ;
-	
-	$this->set(%args) if %args ;
-	return $this ;
-}
+##-----------------------------------------------------------------------------
+#
+#=item B< access([%args]) >
+#
+#Provides access to the feature. This default method is equivalent to:
+#
+#	$feature->set(%args);
+#	return $feature ;
+#
+#Derived features may override this method to return object data, execute code etc.
+#
+#=cut
+#
+#sub access
+#{
+#	my $this = shift ;
+#	my (%args) = @_ ;
+#	
+#	$this->set(%args) if %args ;
+#	return $this ;
+#}
 
 
 ##-----------------------------------------------------------------------------

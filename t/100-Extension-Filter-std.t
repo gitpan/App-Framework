@@ -8,7 +8,7 @@ use File::Copy ;
 use App::Framework ;
 
 # VERSION
-our $VERSION = '1.00' ;
+our $VERSION = '1.01' ;
 
 my $DEBUG=0;
 my $VERBOSE=0;
@@ -49,7 +49,7 @@ my %expected = (
 	'04-terse'	=> {
 		'args'		=> [
 			"-trim_comment",
-			"-comment", "'#'",
+#			"-comment", "'#'",
 			"-trim_space",
 			"-skip_empty",
 		],
@@ -116,7 +116,7 @@ sub app
 	print "Run tests\n" ;
 	foreach my $test (sort keys %expected)
 	{
-		my $cmd = "perl -Mblib t/test/filtertest.pl " ;
+		my $cmd = "$^X -Mblib t/test/filtertest.pl " ;
 		$cmd .= join(' ', @{$expected{$test}{args}}) ;
 		$cmd .= " >$expected{$test}{output}" ;
 

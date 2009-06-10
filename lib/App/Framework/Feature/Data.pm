@@ -103,7 +103,7 @@ leads to the use of the defined data areas as:
 
 	my $sql = $app->data('a_bit_of_sql.sql') ;
 	# or
-	$file = $app->data('data2') ;
+	$file = $app->Data('data2') ;
 
 
 =head2 Variable Expansion
@@ -147,7 +147,7 @@ are treated as comment lines and not included in the data.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.001" ;
+our $VERSION = "1.002" ;
 
 
 #============================================================================================
@@ -345,7 +345,7 @@ sub application_entry
 
 #----------------------------------------------------------------------------
 
-=item B< access([$name]) >
+=item B< data([$name]) >
 
 Returns the lines for the named __DATA__ section. If no name is specified
 returns the first section. If an ARRAY is required, returns the array; otherwise
@@ -355,7 +355,7 @@ Returns undef if no data found, or no section with specified name
 
 =cut
 
-sub access
+sub data
 {
 	my $this = shift ;
 	my ($name) = @_ ;
@@ -389,6 +389,16 @@ $this->_dbg_prt([" + Found data for $name=", $data_ref]) ;
 	
 	return wantarray ? @$data_ref : join "\n", @$data_ref ;	
 }
+
+#----------------------------------------------------------------------------
+
+=item B< Data([$name]) >
+
+Alias to L</data>
+
+=cut
+
+*Data = \&data ;
 
 
 

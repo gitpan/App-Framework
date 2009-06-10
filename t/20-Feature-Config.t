@@ -204,7 +204,7 @@ $app->prt_data("Check Single Section: $section got=", \%conf, " expected=", $sec
 	) ;
 	$new_cfg->read() ;
 
-$app->prt_data("Readback config=", $new_cfg->config) ;
+$app->prt_data("Readback config=", $new_cfg->configuration) ;
 
 	## check simple configuration 
 	@global = $new_cfg->get_array() ;

@@ -28,7 +28,7 @@ my $VERBOSE=0;
 		'dbg-name'			=> 1,
 	) ;
 
-	plan tests => 2*scalar(keys %expected_options) ;
+	plan tests => 1 + 2*scalar(keys %expected_options) ;
 	
 	foreach my $opt (keys %expected_options)
 	{
@@ -83,6 +83,11 @@ sub app
 	# Check options
 	my %opts = $app->options() ;
 
+	# Check options alias
+	my %opts2 = $app->Options() ;
+
+	is_deeply(\%opts, \%opts2, "Access alias") ;
+	
 $app->prt_data("Options=", \%opts) ;
 
 	foreach my $optkey (keys %expected_options)
