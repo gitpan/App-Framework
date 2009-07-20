@@ -478,7 +478,6 @@ my %FIELDS = (
 	'comment'		=> '#',
 	'buffer'		=> 0,
 	'inplace'		=> 0,
-#	'outfmt'		=> '$base.txt',
 	'outfile'		=> undef,
 	'outdir'		=> undef,
 	
@@ -486,7 +485,7 @@ my %FIELDS = (
 	'out_fh'		=> undef,
 	
 	'_filter_state'		=> {},
-	'_filter_opts'			=> undef,
+	'_filter_opts'		=> undef,
 ) ;
 
 #============================================================================================
@@ -642,7 +641,6 @@ $this->_dbg_prt(["#!# Hello, Ive started filter_run()...\n"]) ;
 	$state_href->{vars} = {} ;
 
 	## do each file
-#	foreach my $file (@args)
 	for (my $fnum=0; $fnum < $state_href->{num_files}; ++$fnum)
 	{
 
@@ -660,7 +658,6 @@ $this->_dbg_prt(["#!# Hello, Ive started filter_run()...\n"]) ;
 		$this->call_extend_fn('app_start_fn', $state_href) ;
 
 		## Process file
-#		open my $fh, "<$file" or $this->throw_fatal("Unable to read file \"$file\": $!") ;
 		my $fh = $args_fh[$fnum] ;
 		my $line ;
 		while(defined($line = <$fh>))

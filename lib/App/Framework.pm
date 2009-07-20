@@ -204,7 +204,7 @@ Features provide additional application capabilities, optional modifying what th
 may also simply be an application-specific collection of useful methods.
 
 Unlike core/personality/extension, features are not part of the application object - they are kept in a "feature list" that the application can 
-access to use a feature's methods. For convenience, all features provide an accessor method (I<access>) that is aliased as an application method
+access to use a feature's methods. For convenience, all features provide an accessor method that is aliased as an application method
 with the same name as the feature. This access method provides the most commonly used functionality for that feature. For example, the 'data'
 feature provides access to named data sections as:
 
@@ -213,7 +213,7 @@ feature provides access to named data sections as:
 Alternatively, the data feature object can be retrieved and used:
 
     my $data_feature = $app->feature('data') ;
-    my $data = $data_feature->access('named_section') ;
+    my $data = $data_feature->data('named_section') ;
 
 Features are added in the App::Framework 'use' command as:
 
@@ -465,7 +465,7 @@ use Carp ;
 use App::Framework::Core ;
 
 
-our $VERSION = "0.95" ;
+our $VERSION = "1.00" ;
 
 
 #============================================================================================

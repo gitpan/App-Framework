@@ -27,7 +27,6 @@ my $VERBOSE=0;
 		'-hash=s%              A hash',
 	) ;
 
-	plan tests => 1 + scalar(@sections) + scalar(@mandev) ;
 	
 	## Manual pages
 	
@@ -120,6 +119,11 @@ print "App -man-dev: $stdout\n\n" ;
 		diag("Sorry, can't redirect stdout: $@") ;
 		plan skip_all => 'Unable to redirect stdout (I need to redirect to check the man pages)';
 		exit 0 ;
+	}
+	else
+	{
+		## run tests
+		plan tests => 1 + scalar(@sections) + scalar(@mandev) ;
 	}
 
 

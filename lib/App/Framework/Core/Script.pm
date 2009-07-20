@@ -21,7 +21,6 @@ Derived object from App::Framework::Core. Should only be called via App::Framewo
 Adds command line script specific additions to base properties. Adds the following
 additional options:
 
-	'log|L=s'			Specify a log file
 	'v|"verbose"'		Make script output more verbose
 	'dryrun|"norun"'	Do not execute anything that would alter the file system, just show the commands that would have executed
 	
@@ -35,7 +34,7 @@ etc.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.002" ;
+our $VERSION = "1.003" ;
 
 
 #============================================================================================
@@ -61,7 +60,6 @@ our $class_debug = 0 ;
 
 # Set of script-related default options
 my @SCRIPT_OPTIONS = (
-	['log|L=s',			'Log file', 		'Specify a log file', ],
 	['v|"verbose"',		'Verbose output',	'Make script output more verbose', ],
 	['dryrun|"norun"',	'Dry run', 			'Do not execute anything that would alter the file system, just show the commands that would have executed'],
 ) ;
@@ -184,7 +182,7 @@ sub exit
 	my $this = shift ;
 	my ($exit_code) = @_ ;
 
-$this->_dbg_prt("EXIT: $exit_code\n") ;
+$this->_dbg_prt(["EXIT: $exit_code\n"]) ;
 
 	my $exit_type = $this->exit_type() ;
 	if (lc($exit_type) eq 'die')
@@ -211,7 +209,7 @@ sub catch_error
 	my $this = shift ;
 	my ($error) = @_ ;
 
-$this->_dbg_prt("catch_error()\n") ;
+$this->_dbg_prt(["catch_error()\n"]) ;
 
 	$this->SUPER::catch_error($error) ;
 
@@ -272,7 +270,7 @@ sub script_usage
 	$level ||= "" ;
 
 #$this->debug(1);
-$this->_dbg_prt("Start of script_usage($level)\n") ;
+$this->_dbg_prt(["Start of script_usage($level)\n"]) ;
 	
 	# TODO: Work out a better way to convert pod without the use of external file!
 	
@@ -308,7 +306,7 @@ $this->_dbg_prt("Start of script_usage($level)\n") ;
 		-section => 1,
 	) ;
 
-$this->_dbg_prt("End of script_usage()\n") ;
+$this->_dbg_prt(["End of script_usage()\n"]) ;
 	
 	# remove temp file
 	unlink $fname ;

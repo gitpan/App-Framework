@@ -225,7 +225,7 @@ Giving the options HASH values:
 use strict ;
 use Carp ;
 
-our $VERSION = "1.003" ;
+our $VERSION = "1.005" ;
 
 
 #============================================================================================
@@ -244,7 +244,6 @@ our @ISA = qw(App::Framework::Feature) ;
 #============================================================================================
 # GLOBALS
 #============================================================================================
-
 
 =head2 FIELDS
 
@@ -377,7 +376,7 @@ sub options
 {
 	my $this = shift ;
 
-$this->_dbg_prt( ["Options: access()\n"] ) ;
+$this->_dbg_prt( ["Options()\n"] ) ;
 
 	my $options_href = $this->_options() ;
 	return %$options_href ;
@@ -630,9 +629,6 @@ sub get_options
 	# Do final processing of the options
 	$this->update() ;
 	
-	# Expand the options variables
-	$this->_expand_options() ;
-
 	# get the list suitable for GetOpts
 	my $get_options_aref = $this->_get_options() ;
 
@@ -640,6 +636,9 @@ $this->_dbg_prt( ["get_options() : ARGV=", \@ARGV, " Options=", $get_options_are
 
 	# Parse options using GetOpts
 	my $ok = GetOptions(@$get_options_aref) ;
+
+	# Expand the options variables
+	$this->_expand_options() ;
 
 $this->_dbg_prt( ["get_options() : ok=$ok  Options now=", $get_options_aref], 2 ) ;
 
@@ -824,6 +823,62 @@ $this->_dbg_prt([" + setting=", \%set]) ;
 	$obj->set(%set) if keys %set ;
 }
 
+#----------------------------------------------------------------------------
+
+=item B<option_values_hash()>
+
+Returns the options values and defaults HASH references in an array, values HASH ref
+as the first element.
+
+=cut
+
+sub option_values_hash
+{
+	my $this = shift ;
+
+	my $options_href = $this->_options() ;
+	my $options_fields_href = $this->_option_fields_hash() ;
+
+	# get defaults & options
+	my (%values, %defaults) ;
+	foreach my $opt (keys %$options_fields_href)
+	{
+		$defaults{$opt} = $options_fields_href->{$opt}{'default'} ;
+		$values{$opt} = $options_href->{$opt} if defined($options_href->{$opt}) ;
+	}
+
+	return (\%values, \%defaults) ;
+}
+
+
+#----------------------------------------------------------------------------
+
+=item B<option_values_set($values_href, $defaults_href)>
+
+Sets the options values and defaults based on the HASH references passed in.
+
+=cut
+
+sub option_values_set
+{
+	my $this = shift ;
+	my ($values_href, $defaults_href) = @_ ;
+
+	my $options_href = $this->_options() ;
+	my $options_fields_href = $this->_option_fields_hash() ;
+
+	## Update
+	foreach my $opt (keys %$options_fields_href)
+	{
+		# update defaults to reflect any user specified options
+		$defaults_href->{$opt} = $values_href->{$opt} ;
+		$options_fields_href->{$opt}{'default'} = $defaults_href->{$opt} ;
+		
+		# update values
+		$options_href->{$opt} = $values_href->{$opt} if defined($options_href->{$opt}) ;
+	}
+}
+
 
 # ============================================================================================
 # PRIVATE METHODS
@@ -962,6 +1017,8 @@ sub _expand_options
 {
 	my $this = shift ;
 
+$this->_dbg_prt(["_expand_options()\n"]) ;
+
 	my $options_href = $this->_options() ;
 	my $options_fields_href = $this->_option_fields_hash() ;
 
@@ -972,6 +1029,7 @@ sub _expand_options
 		$defaults{$opt} = $options_fields_href->{$opt}{'default'} ;
 		$values{$opt} = $options_href->{$opt} if defined($options_href->{$opt}) ;
 	}
+$this->_dbg_prt(["_expand_options: defaults=",\%defaults," values=",\%values,"\n"]) ;
 
 	# get replacement vars
 	my @vars ;
@@ -983,14 +1041,21 @@ sub _expand_options
 	}
 	push @vars, \%ENV ;
 	
-	## expand
-	$this->expand_keys(\%values, \@vars) ;
-	$this->expand_keys(\%defaults, \@vars) ;
+#	## expand
+#	$this->expand_keys(\%values, \@vars) ;
+#	push @vars, \%values ;	# allow defaults to use user-specified values
+#	$this->expand_keys(\%defaults, \@vars) ;
+
+$this->_dbg_prt(["_expand_options - end: defaults=",\%defaults," values=",\%values,"\n"]) ;
 	
 	## Update
 	foreach my $opt (keys %$options_fields_href)
 	{
+		# update defaults to reflect any user specified options
+		$defaults{$opt} = $values{$opt} ;
 		$options_fields_href->{$opt}{'default'} = $defaults{$opt} ;
+		
+		# update values
 		$options_href->{$opt} = $values{$opt} if defined($options_href->{$opt}) ;
 	}
 }

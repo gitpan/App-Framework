@@ -6,7 +6,7 @@ use Test::More ;
 use App::Framework ':Script +Run' ;
 
 # VERSION
-our $VERSION = '1.002' ;
+our $VERSION = '1.003' ;
 
 my @data = (
 	'Some output',
@@ -44,6 +44,18 @@ my @expected_array = (
 			"$^X", "t/test/runtest.pl", 
 		]
 	},
+	
+	# early timeout test
+	{
+		expected 	=> "Hello world",
+		delay 		=> 0,
+		args		=> [
+			'cmd'		=> "$^X t/test/runtest.pl", 
+			'progress'	=> \&progress,
+			'timeout'	=> 60,
+		]
+	},
+	
 	{
 		expected 	=> \@data,
 		delay 		=> 1,
@@ -69,11 +81,36 @@ my @expected_array = (
 
 
 my $data_tests = 0 ;
+my $no_data_tests = 0 ;
+my $progress_tests = 0 ;
 foreach my $test_href (@expected_array)
 {
-	++$data_tests if (ref($test_href->{expected}) eq 'ARRAY') ;
+	## progress checked
+	my $prog ;
+	foreach (@{$test_href->{args}})
+	{
+		if ($_ eq 'progress')
+		{
+			++$prog ;
+			last ;
+		}
+	}
+	if ($prog)
+	{
+		++$progress_tests  ;
+
+		if (ref($test_href->{expected}) eq 'ARRAY')
+		{
+			++$data_tests  ;
+		}
+		else
+		{
+			++$no_data_tests ;		
+		}
+	}
+
 }
-my $no_data_tests = scalar(@expected_array) - $data_tests ;
+
 
 print "Data tests=$data_tests, No data tests=$no_data_tests\n" ;
 
@@ -178,6 +215,7 @@ $app->prt_data("Required stats=", $required) ;
 		}
 	}	
 
+	my $idx = 1 ;
 	foreach my $test_href (@expected_array)
 	{
 $app->prt_data("Test HASH=", $test_href) ;
@@ -192,11 +230,11 @@ $app->prt_data("Test HASH=", $test_href) ;
 		$results_aref = $app->run->results() ;
 		if (ref($test_href->{expected}) eq 'ARRAY')
 		{
-			is_deeply($results_aref, $test_href->{expected}, "Test array results") ;
+			is_deeply($results_aref, $test_href->{expected}, "$idx : Test array results") ;
 		}
 		else
 		{
-			is($results_aref->[0], $test_href->{expected}, "Test scalar results") ;
+			is($results_aref->[0], $test_href->{expected}, "$idx : Test scalar results") ;
 		}
 		
 		## direct object access
@@ -206,12 +244,14 @@ $app->prt_data("Test HASH=", $test_href) ;
 		$results_aref = $run->results() ;
 		if (ref($test_href->{expected}) eq 'ARRAY')
 		{
-			is_deeply($results_aref, $test_href->{expected}, "Test array results") ;
+			is_deeply($results_aref, $test_href->{expected}, "$idx : Test direct array results") ;
 		}
 		else
 		{
-			is($results_aref->[0], $test_href->{expected}, "Test scalar results") ;
+			is($results_aref->[0], $test_href->{expected}, "$idx : Test direct scalar results") ;
 		}
+		
+		++$idx ;
 	}
 
 	

@@ -325,7 +325,7 @@ filenames and STDIN will then be used.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.005" ;
+our $VERSION = "1.006" ;
 
 #============================================================================================
 # USES
@@ -560,7 +560,7 @@ sub append_args
 	my $this = shift ;
 	my ($args_aref) = @_ ;
 
-$this->_dbg_prt("Args: append_args()\n") ;
+$this->_dbg_prt(["Args: append_args()\n"]) ;
 
 	my @combined_args = (@{$this->user_args}, @$args_aref) ;
 	$this->user_args(\@combined_args) ;
@@ -593,7 +593,7 @@ sub update
 {
 	my $this = shift ;
 
-$this->_dbg_prt("Args: update()\n") ;
+$this->_dbg_prt(["Args: update()\n"]) ;
 
 	## get user settings
 	my $args_aref = $this->user_args ;
@@ -640,7 +640,7 @@ $this->_dbg_prt(["Arg entry=", $arg_entry_aref], 2)   ;
 		}		
 		$optional ||= $arg_optional ;
 
-$this->_dbg_prt("Args: update() - arg_optional=$arg_optional optional=$optional\n") ;
+$this->_dbg_prt(["Args: update() - arg_optional=$arg_optional optional=$optional\n"]) ;
 		
 		# Create full entry
 		my $href = $this->_new_arg_entry($name, $arg_spec, $summary, $description, $default_val, $pod_spec, $arg_type, $arg_direction, $dest_type, $optional, $arg_append, $arg_mode) ;
@@ -652,7 +652,7 @@ $this->_dbg_prt(["Arg $name HASH=", $href], 2)   ;
 		push @$args_list, $name ; 
 	}
 
-$this->_dbg_prt("update() - END\n", 2) ;
+$this->_dbg_prt(["update() - END\n"], 2) ;
 
 	## Save
 	$this->arg_names($args_list) ;
@@ -743,7 +743,7 @@ $this->_dbg_prt(["check_args() Names=", $arg_names_href, "Values=", $args_href, 
 		## Special handling for @* spec
 		if ($arg_names_href->{$name}{'dest_type'})
 		{
-	$this->_dbg_prt(" + + special dest type\n", 2) ;
+	$this->_dbg_prt([" + + special dest type\n"], 2) ;
 			if (defined($value))
 			{
 				@values = @$value ;
@@ -757,7 +757,7 @@ $this->_dbg_prt(["check_args() Names=", $arg_names_href, "Values=", $args_href, 
 			}
 		}
 
-$this->_dbg_prt(" + values (@values) [".scalar(@values)."]\n", 2) ;
+$this->_dbg_prt([" + values (@values) [".scalar(@values)."]\n"], 2) ;
 
 		## Very special case of * spec with no args - set fh to STDIN if required
 		if ($arg_names_href->{$name}{'dest_type'} eq '*')
@@ -789,7 +789,7 @@ $this->_dbg_prt(" + values (@values) [".scalar(@values)."]\n", 2) ;
 			++$idx ;
 			my $arg_optional = $arg_names_href->{$name}{'optional'} ;
 			
-$this->_dbg_prt(" + checking $name value=$val, type=$type, optional=$arg_optional ..\n", 2) ;
+$this->_dbg_prt([" + checking $name value=$val, type=$type, optional=$arg_optional ..\n"], 2) ;
 		
 			# First check that an arg has been specified
 			if ($idx >= scalar(@$argv_aref))
@@ -806,7 +806,7 @@ $this->_dbg_prt(" + checking $name value=$val, type=$type, optional=$arg_optiona
 			## Input
 			if ($arg_names_href->{$name}{'direction'} eq 'i')
 			{
-	$this->_dbg_prt(" + Check $val for existence\n", 2) ;
+	$this->_dbg_prt([" + Check $val for existence\n"], 2) ;
 				
 				## skip checks if optional and no value specified (i.e. do the check if a default is specified)
 				if (!$arg_optional && $val)
@@ -824,7 +824,7 @@ $this->_dbg_prt(" + checking $name value=$val, type=$type, optional=$arg_optiona
 				}
 				else
 				{
-	$this->_dbg_prt(" + Skipped checks opt=$arg_optional val=$val bool=".."...\n", 2) ;
+	$this->_dbg_prt([" + Skipped checks opt=$arg_optional val=$val bool=".."...\n"], 2) ;
 					
 				}	
 				
@@ -994,7 +994,66 @@ sub arg_entry
 }
 
 
+#----------------------------------------------------------------------------
 
+=item B<args_values_hash()>
+
+Returns the args values HASH reference.
+
+=cut
+
+sub args_values_hash 
+{
+	my $this = shift ;
+
+	my $args_href = $this->_args() ;
+	my $args_names_href = $this->_arg_names_hash() ;
+
+	# get args
+	my %values ;
+	foreach my $arg (keys %$args_names_href)
+	{
+		$values{$arg} = $args_href->{$arg} if defined($args_href->{$arg}) ;
+	}
+
+	return \%values ;
+}
+
+#----------------------------------------------------------------------------
+
+=item B<args_values_set($values_href)>
+
+Sets the args values based on the values in the HASH reference B<$values_href>.
+
+=cut
+
+sub args_values_set 
+{
+	my $this = shift ;
+	my ($values_href) = @_ ;
+
+	my $args_href = $this->_args() ;
+	my $args_names_href = $this->_arg_names_hash() ;
+
+	## Update
+#	foreach my $arg (keys %$args_names_href)
+#	{
+#		$args_href->{$arg} = $values_href->{$arg} if defined($args_href->{$arg}) ;
+#	}
+
+	# Cycle through
+	my $names_aref = $this->arg_names() ;
+	foreach my $arg (@$names_aref)
+	{
+		if ( defined($args_href->{$arg}) )
+		{
+			my $arg_entry_href = $this->arg_entry($arg) ;
+			
+			$args_href->{$arg} = $values_href->{$arg} ;
+			$arg_entry_href->{'default'} = $values_href->{$arg} ;
+		}
+	}
+}
 
 # ============================================================================================
 # PRIVATE METHODS
@@ -1034,9 +1093,9 @@ sub _expand_args
 	}
 	push @vars, \%ENV ;
 	
-	## expand
-	$this->expand_keys(\%values, \@vars) ;
-	
+#	## expand
+#	$this->expand_keys(\%values, \@vars) ;
+		
 	## Update
 	foreach my $arg (keys %$args_names_href)
 	{
@@ -1163,7 +1222,7 @@ $this->_dbg_prt(["arg: _process_arg_spec($arg_spec)"], 2)   ;
 	{
 		$arg = $1 ;
 	}
-$this->_dbg_prt("_process_arg_spec() set: pod spec=$spec arg=$arg\n", 2) ;
+$this->_dbg_prt(["_process_arg_spec() set: pod spec=$spec arg=$arg\n"], 2) ;
 	
 	my $dest_type = "" ;
 	if ($arg =~ /([\@\*])/i)
@@ -1211,7 +1270,7 @@ $this->_dbg_prt("_process_arg_spec() set: pod spec=$spec arg=$arg\n", 2) ;
 	my $arg_optional = 0 ;
 	if ($arg =~ /\?/i)
 	{
-$this->_dbg_prt("_process_arg_spec() set: optional\n", 2) ;
+$this->_dbg_prt(["_process_arg_spec() set: optional\n"], 2) ;
 		$arg_optional = 1 ;
 	}	
 
@@ -1221,7 +1280,7 @@ $this->_dbg_prt("_process_arg_spec() set: optional\n", 2) ;
 		$arg_mode = 'b' ;
 	}
 	
-$this->_dbg_prt("_process_arg_spec() set: final pod spec=$spec arg=$arg\n", 2) ;
+$this->_dbg_prt(["_process_arg_spec() set: final pod spec=$spec arg=$arg\n"], 2) ;
 				
 	return ($name, $arg_spec, $spec, $dest_type, $arg_type, $arg_direction, $arg_optional, $arg_append, $arg_mode) ;
 }

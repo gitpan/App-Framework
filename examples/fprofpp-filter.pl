@@ -80,12 +80,22 @@ sub app_end
 
 	if ($opts_href->{sort})
 	{
+		my ($file_len, $fn_len) = (0, 0) ;
+		foreach my $aref ( sort {$b->[5] <=> $a->[5]} @{$state_href->{info}})
+		{
+			my ($file, $line, $time, $count, $source, $total, $function) = @$aref ;
+			$file_len = length($file) if $file_len < length($file) ;
+			$fn_len = length($function) if $fn_len < length($function) ;
+			
+		}
+		$file_len += 5 ;
+		$fn_len += 5 ;
 		foreach my $aref ( sort {$b->[5] <=> $a->[5]} @{$state_href->{info}})
 		{
 			my ($file, $line, $time, $count, $source, $total, $function) = @$aref ;
 			
 			$app->write_output(
-				sprintf("%-70s:%-4d %3.4f %8d [%10.2f] : %s :: %s", 
+				sprintf("%-${file_len}s:%-4d %3.4f %8d [%10.2f] : %-${fn_len}s :: %s", 
 					$file, $line, $time, $count, $total, $function, $source) 
 			);
 		}

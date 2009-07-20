@@ -184,11 +184,15 @@ sub application_entry
 {
 	my $this = shift ;
 
+$this->_dbg_prt(["application_entry()\n"]) ;
+
 	## Handle special options
 	my $app = $this->app ;
 	my %opts = $app->options() ;
+$this->_dbg_prt(["pod options=",\%opts]) ;
 	if ($opts{'man'} || $opts{'help'})
 	{
+$this->_dbg_prt(["pod man page=$opts{'man'} \n"]) ;
 		my $type = $opts{'man'} ? 'man' : 'help' ;
 		$app->usage($type) ;
 		$app->exit(0) ;
@@ -200,7 +204,7 @@ sub application_entry
 	}
 	if ($opts{'pod'})
 	{
-		print $this->access() ;
+		print $this->pod() ;
 		$app->exit(0) ;
 	}
 	
@@ -342,6 +346,7 @@ sub pod_options
 	foreach my $option_name (@$names_aref)
 	{
 		my $option_entry_href = $this->app->feature('Options')->option_entry($option_name) ;
+$this->_dbg_prt(["entry for $option_name=",$option_entry_href]) ;
 		my $default = "" ;
 		if ($option_entry_href->{'default'})
 		{

@@ -7,7 +7,7 @@ use App::Framework ;
 use App::Framework::Base ;
 
 # VERSION
-our $VERSION = '1.234' ;
+our $VERSION = '2.00' ;
 
 my $DEBUG=0;
 my $VERBOSE=0;
@@ -75,20 +75,39 @@ an actually Perl file is found. The @INC array has the following added:
 i.e. The directory that the Perl file resides in, and a sub-directory 'lib' will be searched for application-specific modules.
 NAMED3
 
+my $NAMED4 =<<'NAMED4' ;
+App vars
+05-Data
+.t
+main
+
+Options vars
+an opt1
+this is new
+
+Args vars
+an arg
+an opt1
+this is new
+NAMED4
+
 my %NAMED = (
 	'named1' => $NAMED1,
 	'named2' => $NAMED2,
-#	'named3' => $NAMED3,
-#
-#	'data1' => $NAMED1,
-#	'data2' => $NAMED2,
-#	'data3' => $NAMED3,
+	'named3' => $NAMED3,
+	'named4' => $NAMED4,
+
+	'data1' => $NAMED1,
+	'data2' => $NAMED2,
+	'data3' => $NAMED3,
+	'data4' => $NAMED4,
 ) ;
 	
 	plan tests => 2 * 2 * (keys %NAMED) ;
 
 $App::Framework::Base::class_debug = 2 ;
 
+	push @ARGV, ('-opt2', 'this is new') ;
 	App::Framework->new()->go() ;
 
 
@@ -166,6 +185,17 @@ __DATA__
 
 Tests named data handling
 
+[ARGS]
+
+* arg1=s	Arg1 [default=an arg]
+* arg2=s	Arg2 [default=$opt1]
+* arg3=s	Arg3 [default=$opt2]
+
+[OPTIONS]
+
+-opt1=s		Opt1 [default=an opt1]
+-opt2=s		Opt2 [default=an opt2]
+
 [DESCRIPTION]
 
 B<$name> does some stuff.
@@ -225,4 +255,19 @@ an actually Perl file is found. The @INC array has the following added:
 	* \$progpath/lib
 	
 i.e. The directory that the Perl file resides in, and a sub-directory 'lib' will be searched for application-specific modules.
+__#================================================================================
+__DATA__ named4
+App vars
+$progname
+$progext
+$package
+
+Options vars
+$opt1
+$opt2
+
+Args vars
+$arg1
+$arg2
+$arg3
 __#================================================================================

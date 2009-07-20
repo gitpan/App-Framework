@@ -275,51 +275,6 @@ sub register_app
 }
 
 
-##-----------------------------------------------------------------------------
-#
-#=item B< access([%args]) >
-#
-#Provides access to the feature. This default method is equivalent to:
-#
-#	$feature->set(%args);
-#	return $feature ;
-#
-#Derived features may override this method to return object data, execute code etc.
-#
-#=cut
-#
-#sub access
-#{
-#	my $this = shift ;
-#	my (%args) = @_ ;
-#	
-#	$this->set(%args) if %args ;
-#	return $this ;
-#}
-
-
-##-----------------------------------------------------------------------------
-#
-#=item B< options_list() >
-#
-#If a feature needs to add command line options, it returns the list of options in this function
-#(or an empty array otherise).
-#
-#Options array must be in the format specified in L<App::Framework::Feature::Options>
-#
-#=cut
-#
-#sub options_list
-#{
-#	my $this = shift ;
-#
-#	my $opts_aref = $this->_options ;
-##$this->prt_data("$this options_list()", $opts_aref) ;
-#	
-#	return @{$opts_aref};
-#}
-
-
 
 # ============================================================================================
 # END OF PACKAGE

@@ -194,6 +194,7 @@ sub check_old_version
 	if ($version)
 	{
 		print "Found an existing installation: Version $version\n" ;
+		$version =~ s/_//g ;
 		
 		## see if we need to clear out old
 		if ($version < 0.90)

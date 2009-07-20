@@ -75,7 +75,7 @@ These are fully described in L<App::Framework::Features::Args>.
 After the settings (described above), one or more extra data areas can be created by starting that area with a new __DATA__ line.
 
 Each defined data area is named 'data1', 'data2' and so on. These data areas are user-defined multi line text that can be accessed 
-by the object's accessor method L</access>, for example:
+by the object's accessor method L</data>, for example:
 
 	my $data = $app->data('data1') ;
 
@@ -126,6 +126,10 @@ Option names - the values of any command line options may be used as variables
 
 =item *
 
+Arguments names - the values of any command line arguments may be used as variables
+
+=item *
+
 Application fields - any fields of the $app object may be used as variables
 
 =item *
@@ -147,7 +151,7 @@ are treated as comment lines and not included in the data.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.002" ;
+our $VERSION = "1.003" ;
 
 
 #============================================================================================
@@ -303,12 +307,15 @@ sub app_start_exit
 
 	## Handle special options
 	my $app = $this->app ;
-	my %opts = $app->options() ;
 	my %app_vars = $app->vars ;
+
+	my %opts = $app->options() ;
+	my $args_values_href = $app->feature('Args')->args_values_hash() ;
+
 	
 	my $data_href = $this->_data_hash() ;
 
-	$this->expand_keys($data_href, [\%opts, \%app_vars, \%ENV]) ;
+	$this->expand_keys($data_href, [\%opts, $args_values_href, \%app_vars, \%ENV]) ;
 }
 
 
@@ -363,7 +370,7 @@ sub data
 	my $data_ref ;
 	$name ||= "" ;
 
-$this->_dbg_prt(["Data: access($name)\n"]) ;
+$this->_dbg_prt(["Data: data($name)\n"]) ;
 	
 	if ($name)
 	{
@@ -443,7 +450,7 @@ $this->_dbg_prt(["Reading __DATA__\n"]) ;
 
 		## Read data in - first split into sections
 		my $line ;
-		my $data_num = 0 ;
+		my $data_num = 1 ;
 		while (defined($line=<alias>))
 		{
 			chomp $line ;

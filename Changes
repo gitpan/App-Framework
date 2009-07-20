@@ -1,5 +1,12 @@
 Revision history for App-Framework
 
+1.00    Mon Jul 20 15:45:00 2009
+		Release after user testing
+		Bug fix: Corrected Run feature timeout capability
+		Updated Run feature testing
+		Re-worked options/args/data so that their "variables" can be used in any of the other sections
+		Added logging feature
+
 0.95    Wed Jun 10 14:04:00 2009
 		Bug fix: Corrected various test scripts for other OSs
 		Updated Makefile.PL to allow user to fully install optional modules with their dependencies

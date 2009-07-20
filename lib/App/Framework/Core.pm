@@ -23,7 +23,7 @@ Base class for applications. Expected to be derived from by an implementable cla
 use strict ;
 use Carp ;
 
-our $VERSION = "1.012" ;
+our $VERSION = "1.013" ;
 
 
 #============================================================================================
@@ -731,7 +731,7 @@ $this->_dbg_prt(["install_features()", \@features, "features args=", $feature_ar
 
 		croak "Feature \"$feature\" not supported" unless ($loaded) ;
 
-$this->_dbg_prt("Feature: $feature - loaded=$loaded\n") ;
+$this->_dbg_prt(["Feature: $feature - loaded=$loaded\n"]) ;
 		
 		if ($loaded)
 		{
@@ -879,6 +879,33 @@ sub _feature_info
 	return $info_href ;	
 }
 
+#----------------------------------------------------------------------------
+
+=item B<feature_installed($name)>
+
+Return named feature object if the feature is installed; otherwise returns undef.
+
+=cut
+
+sub feature_installed
+{
+	my $this = shift ;
+	my ($name) = @_ ;
+
+	my $features_href = $this->_feature_list() ;
+	$name = lc $name ;
+	
+	my $feature = undef ;
+	if (exists($features_href->{$name}))
+	{
+		my $feature_href = $features_href->{$name} ;
+		$feature = $feature_href->{'object'} ;
+	}	
+
+	return $feature ;	
+}
+
+
 
 #----------------------------------------------------------------------------
 
@@ -986,20 +1013,20 @@ sub _dispatch_features
 	my $this = shift ;
 	my ($method, $status, @args) = @_ ;
 
-$this->_dbg_prt("_dispatch_features(method=$method, status=$status) (@args)\n") ;
+$this->_dbg_prt(["_dispatch_features(method=$method, status=$status) (@args)\n"]) ;
 	
 	# remove package name (if specified)
 	$method =~ s/^(.*)::// ;
 	
 	my $feature_methods_href = $this->_feature_methods() ;
 	my $fn = "${method}_${status}" ;
-$this->_dbg_prt(" + method=$method fn=$fn\n")  ;
+$this->_dbg_prt([" + method=$method fn=$fn\n"])  ;
 
 	if (exists($feature_methods_href->{$fn}))
 	{
 		foreach my $feature_entry (@{$feature_methods_href->{$fn}})
 		{
-$this->_dbg_prt(" + dispatching fn=$fn feature=$feature_entry->{feature}\n") ;
+$this->_dbg_prt([" + dispatching fn=$fn feature=$feature_entry->{feature}\n"]) ;
 $this->_dbg_prt(["++ entry=", $feature_entry], 2) ;
 
 			my $feature_obj = $feature_entry->{'obj'} ;
@@ -1144,17 +1171,74 @@ sub getopts
 $this->_dispatch_entry_features() ;
 
 	# Parse options using GetOpts
-	my $ok = $this->feature('Options')->get_options() ;
+	my $opt = $this->feature('Options') ;
+	my $args = $this->feature('Args') ;
+	
+	my $ok = $opt->get_options() ;
 
 	# If ok, get any specified filenames
 	if ($ok)
 	{
 		# Get args
-		my $arglist = $this->feature('Args')->get_args() ;
+		my $arglist = $args->get_args() ;
 
 		$this->_dbg_prt(["getopts() : arglist=", $arglist], 2) ;
 	}
 	
+	## Expand vars
+	my %values ;
+	my ($opt_values_href, $opt_defaults_href) = $opt->option_values_hash() ;
+	my ($args_values_href) = $args->args_values_hash() ;
+	
+	%values = (%$opt_values_href) ;
+	my %args_clash ;
+	foreach my $key (keys %$args_values_href)
+	{
+		if (exists($values{$key}))
+		{
+			$args_clash{$key} = $args_values_href->{$key} ;
+		}
+		else
+		{
+			$values{$key} = $args_values_href->{$key} ;
+		}
+	}
+
+	my @vars ;
+	my %app_vars = $this->vars ;
+	push @vars, \%app_vars ;
+	push @vars, \%ENV ;
+
+	## expand all vars
+	$this->expand_keys(\%values, \@vars) ;
+	
+	# set new values
+	foreach my $key (keys %$opt_values_href)
+	{
+		$opt_values_href->{$key} = $values{$key} ;
+	}
+	foreach my $key (keys %$args_values_href)
+	{
+		$args_values_href->{$key} = $values{$key} ;
+	}
+
+	## handle any name clash
+	if (keys %args_clash)
+	{
+		unshift @vars, \%values ;
+		$this->expand_keys(\%args_clash, \@vars) ;
+
+		# set new values
+		foreach my $key (keys %args_clash)
+		{
+			$args_values_href->{$key} = $args_clash{$key} ;
+		}
+	}
+
+	## update settings
+	$opt->option_values_set($opt_values_href, $opt_defaults_href) ;
+	$args->args_values_set($args_values_href) ;
+
 $this->_dispatch_exit_features() ;
 
 	return $ok ;
@@ -1405,7 +1489,7 @@ sub _exec_fn
 	my $fn_name = "${fn}_fn" ;
 	my $sub = $this->$fn_name() || '' ;
 
-$this->_dbg_prt("_exec_fn($fn) this=$this fn=$fn_name sub=$sub\n", 2) ;
+$this->_dbg_prt(["_exec_fn($fn) this=$this fn=$fn_name sub=$sub\n"], 2) ;
 #$this->prt_data("_exec_fn($fn) args[1]=", \$args[1], "args[2]=",\$args[2]) ;
 #if $this->debug()>=2 ;
 
@@ -1528,7 +1612,7 @@ sub _register_var
 
     local (*alias);             # a local typeglob
 
-$this->_dbg_prt("_register_var($type, $external_name, $field_name)\n", 2) ;
+$this->_dbg_prt(["_register_var($type, $external_name, $field_name)\n"], 2) ;
 
     # We want to get access to the stash corresponding to the package
     # name
@@ -1540,7 +1624,7 @@ no strict "refs" ;
 	{
 		*alias = $stash{$external_name} ;
 
-$this->_dbg_prt(" + found $external_name in $package\n", 2) ;
+$this->_dbg_prt([" + found $external_name in $package\n"], 2) ;
 
 		if ($type eq 'SCALAR')
 		{
@@ -1567,7 +1651,7 @@ $this->_dbg_prt(" + found $external_name in $package\n", 2) ;
 		{
 			if (defined(&alias))
 			{
-$this->_dbg_prt(" + + Set $type - $external_name as $field_name\n", 2) ;
+$this->_dbg_prt([" + + Set $type - $external_name as $field_name\n"], 2) ;
 				$this->set($field_name => \&alias) ;
 			}
 		}
@@ -1603,7 +1687,7 @@ sub _expand_vars
 {
 	my $this = shift ;
 
-$this->_dbg_prt("_expand_vars() - START\n", 2) ;
+$this->_dbg_prt(["_expand_vars() - START\n"], 2) ;
 
 	# Get hash of fields
 	my %fields = $this->vars() ;
@@ -1622,7 +1706,7 @@ $this->_dbg_prt("_expand_vars() - START\n", 2) ;
 		my $ix = index $fields{$field}, '$' ; 
 		if ($ix >= 0)
 		{
-$this->_dbg_prt(" + + $field = $fields{$field} : index=$ix\n", 3) ;
+$this->_dbg_prt([" + + $field = $fields{$field} : index=$ix\n"], 3) ;
 
 			# Do replacement
 			$fields{$field} =~ s{
@@ -1640,7 +1724,7 @@ $this->_dbg_prt(" + + $field = $fields{$field} : index=$ix\n", 3) ;
 								}egx;
 
 
-$this->_dbg_prt(" + + + new = $fields{$field}\n", 3) ;
+$this->_dbg_prt([" + + + new = $fields{$field}\n"], 3) ;
 			
 			# Add to list
 			$changed{$field} = $fields{$field} ;
@@ -1652,11 +1736,11 @@ $this->_dbg_prt([" + changed=", \%changed], 2) ;
 	# If some have changed then set them
 	if (keys %changed)
 	{
-$this->_dbg_prt(" + + set changed\n", 2) ;
+$this->_dbg_prt([" + + set changed\n"], 2) ;
 		$this->set(%changed) ;
 	}
 
-$this->_dbg_prt("_expand_vars() - END\n", 2) ;
+$this->_dbg_prt(["_expand_vars() - END\n"], 2) ;
 }
 
 

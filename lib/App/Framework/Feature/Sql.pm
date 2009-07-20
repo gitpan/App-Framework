@@ -18,10 +18,8 @@ B<DOCUMENTATION TO BE COMPLETED>
 =cut
 
 use strict ;
-use Carp ;
-use Cwd ;
 
-our $VERSION = "2.015" ;
+our $VERSION = "2.016" ;
 
 #============================================================================================
 # USES
@@ -39,29 +37,37 @@ our @ISA = qw(App::Framework::Feature) ;
 # GLOBALS
 #============================================================================================
 
-=head2 Fields
+=head2 FIELDS
 
-	'host'		=> MySql host [default=localhost]
-	'database'	=> Database name (required)
-	'table'		=> Table name
-	'user'		=> User name (required)
-	'password'	=> Password (required)
-	
-	'trace'		=> Sql debug trace level (default=0)
-	'trace_file'=> If specified, output trace information to file (default=STDOUT)
-	
-	'prepare'	=> HASH ref to one or more STH definitions (as required by L<sth_create()>)
-				   Each HASH entry is of the form:
-				   
-				   'name' => (specification as per L<sth_create()>)
-				   
-				   Where 'name' is the name used when the STH is created
+The following fields should be defined either in the call to 'new()', as part of a 'set()' call, or called by their accessor method
+(which is the same name as the field):
+
 
 =over 4
 
+=item B<host> - MySql host [default=localhost]
+
+
+=item B<database> - Database name (required)
+
+=item B<table> - Table name
+
+=item B<user> - User name
+
+=item B<password> - Password
+
+=item B<trace> - Sql debug trace level [default=0]
+
+=item B<trace_file> - If specified, output trace information to file (default=STDOUT)
+
+=item B<sql_vars> - Default HASH used to store 'prepare' values
+
+=item B<prepare> - Create one or more queries
+
+
+=back
+
 =cut
-
-
 
 my %FIELDS = (
 	# Object Data
@@ -75,10 +81,15 @@ my %FIELDS = (
 	'trace_file'	=> undef,
 	
 	'prepare'		=> undef,		# Special 'parameter' used to create STHs 
+	'sql_vars'		=> {},
 	
 	'_sth'			=> {},
 ) ;
 
+# ensure these fields are set before starting to process the 'prepare' values
+my @PRIORITY_FIELDS = qw/database user password table sql_vars/ ;
+
+# Default STH
 my $DEFAULT_STH_NAME = "_current" ;
 
 #* DELETE
@@ -176,48 +187,48 @@ my %CMDS = (
 ) ;
 
 
-=back
-
-=head2 %CMD_SQL - Parse control hash
-
-Variables get created with the name 
-
-	* $sqlvar_<context>
-	
-where <context> is the hash key. This created variable contains the sql for this command or option.
-
-If the control hash entry contains a 'vals' entry, then the following variable is created:
-
-	* @sqlvar_<context>
-
-This will be a text string containing something like "@sqlvar_select_vals,@sqlvar_where_vals" i.e. a comma
-seperated list of references to other arrays. These values will be expanded into a real array before use in the
-sql prepare.
-
-Also, as each entry is processed, extra variables are created:
-
-	* $sqlvar_<context>_prefix	- Prefix string for this entry
-	* $sqlvar_<context>_format	- Just the same as sqlvar_<context>
-
-
-=head2 Specification variables
-
-This control hash is used to direct processing of the SQL specification passed to sth_create(). If the spec
-contains a 'vars' field then these additional variables are created in the context: 
-
-	* $sqlvar_<context>_varlist	- List of the 'vars' in the format `var`, `var` ..
-	* $sqlvar_<context>_andlist	- List of the 'vars' in the format `var` AND `var` ..
-	* $sqlvar_<context>_varlist	- List of the 'vars' in the format `var`=?, `var`=? ..
-
-If the spec has a 'vals' entry, then these are pushed on to an ARRAY ref and stored in:
-
-	* @sqlvar_<context>_vals
-
-@sqlvar_<context>_vals = Real ARRAY ref (provided by the spec)
-@sqlvar_<context> = String in the format "@sqlvar_select_vals,@sqlvar_where_vals" (provided by parse control hash)
-
-
-=cut
+#=back
+#
+#=head2 %CMD_SQL - Parse control hash
+#
+#Variables get created with the name 
+#
+#	* $sqlvar_<context>
+#	
+#where <context> is the hash key. This created variable contains the sql for this command or option.
+#
+#If the control hash entry contains a 'vals' entry, then the following variable is created:
+#
+#	* @sqlvar_<context>
+#
+#This will be a text string containing something like "@sqlvar_select_vals,@sqlvar_where_vals" i.e. a comma
+#seperated list of references to other arrays. These values will be expanded into a real array before use in the
+#sql prepare.
+#
+#Also, as each entry is processed, extra variables are created:
+#
+#	* $sqlvar_<context>_prefix	- Prefix string for this entry
+#	* $sqlvar_<context>_format	- Just the same as sqlvar_<context>
+#
+#
+#=head2 Specification variables
+#
+#This control hash is used to direct processing of the SQL specification passed to sth_create(). If the spec
+#contains a 'vars' field then these additional variables are created in the context: 
+#
+#	* $sqlvar_<context>_varlist	- List of the 'vars' in the format `var`, `var` ..
+#	* $sqlvar_<context>_andlist	- List of the 'vars' in the format `var` AND `var` ..
+#	* $sqlvar_<context>_varlist	- List of the 'vars' in the format `var`=?, `var`=? ..
+#
+#If the spec has a 'vals' entry, then these are pushed on to an ARRAY ref and stored in:
+#
+#	* @sqlvar_<context>_vals
+#
+#@sqlvar_<context>_vals = Real ARRAY ref (provided by the spec)
+#@sqlvar_<context> = String in the format "@sqlvar_select_vals,@sqlvar_where_vals" (provided by parse control hash)
+#
+#
+#=cut
 
 
 
@@ -390,7 +401,7 @@ sub set
 
 	# ensure priority args are handled first
 	my %priority ;
-	foreach my $arg (qw/database user password table/)
+	foreach my $arg (@PRIORITY_FIELDS)
 	{
 		my $val = delete $args{$arg} ;
 		$priority{$arg} = $val if $val ; 
@@ -399,8 +410,11 @@ sub set
 	{
 		$this->SUPER::set(%priority) ;
 
-		# Connect
-		$this->connect() ;		
+		# Connect if we can
+		if ($this->database && $this->host)
+		{
+			$this->connect() ;		
+		}
 	}
 	
 	# handle the rest
@@ -489,12 +503,12 @@ sub trace
 	my (@args) = @_ ;
 
 	# Update value
-	my $trace = $this->SUPER::trace(@args) ;
+##	my $trace = $this->SUPER::trace(@args) ;
+	my $trace = $this->field_access('trace', @args) ;
 
 	if (@args)
 	{
 		my $dbh = $this->dbh() ;
-	#	my $trace = $this->trace() ;
 		my $trace_file = $this->trace_file() ;
 		
 		# Update trace level
@@ -518,13 +532,13 @@ sub trace_file
 	my (@args) = @_ ;
 	
 	# Update value
-	my $trace_file = $this->SUPER::trace_file(@args) ;
+##	my $trace_file = $this->SUPER::trace_file(@args) ;
+	my $trace_file = $this->field_access('trace_file', @args) ;
 	
 	if (@args)
 	{
 		my $dbh = $this->dbh() ;
 		my $trace = $this->trace() ;
-	#	my $trace_file = $this->trace_file() ;
 		
 		# Update trace level
 		$this->_set_trace($dbh, $trace, $trace_file) ;	
@@ -552,7 +566,10 @@ sub connect
 
 	$this->set(%args) ;
 
-	$this->_dbg_prt("Sql::connect() => ".$this->database()."\n") ;
+	$this->_dbg_prt(["Sql::connect() => ",$this->database(),"\n"]) ;
+
+	$this->throw_fatal("SQL connect error: no database specified") unless $this->database() ;
+	$this->throw_fatal("SQL connect error: no host specified") unless $this->host() ;
 
 	my $dbh ;
 	eval
@@ -567,17 +584,14 @@ sub connect
 					{'RaiseError' => 1}) or $this->throw_fatal( $DBI::errstr ) ;
 		$this->dbh($dbh) ;
 		
-		# Update trace level
-#		my $trace = $this->trace() ;
-#		my $trace_file = $this->trace_file() ;
-#		$this->_set_trace($dbh, $trace, $trace_file) ;
 	};
 	if ($@)
 	{
 		$this->throw_fatal("SQL connect error: $@", 1000) ;
 	}
 	
-	$this->_dbg_prt(" + connected dbh=$dbh : db=".$this->database()." user=".$this->user()." pass=".$this->password()."\n") ;
+	my $dbh_dbg = $dbh || "" ;
+	$this->_dbg_prt([" + connected dbh=$dbh_dbg : db=",$this->database()," user=",$this->user()," pass=",$this->password(),"\n"]) ;
 	
 	return $dbh ;
 }
@@ -596,14 +610,13 @@ sub disconnect
 
 	my $dbh = $this->dbh() ;
 
-	$this->_dbg_prt("Sql::disconnect() => dbh=$dbh\n") ;
+	my $dbh_dbg = $dbh || "" ;
+	$this->_dbg_prt(["Sql::disconnect() => dbh=$dbh_dbg\n"]) ;
 
 	eval
 	{
 		if ($dbh)
 		{
-## TODO: Work out why this causes problems! (Mysql server gone away)
-##			$dbh->disconnect() ;	
 			$this->dbh(0) ;
 		}
 	};
@@ -612,7 +625,7 @@ sub disconnect
 		$this->throw_fatal("SQL disconnect error: $@", 1000) ;
 	}
 
-	$this->_dbg_prt(" + disconnected\n") ;
+	$this->_dbg_prt([" + disconnected\n"]) ;
 }
 
 
@@ -705,12 +718,12 @@ sub sth_create
 	# Default table name
 	$vars{'sqlvar_table'} = $vars{'table'} ;
 
-$this->_dbg_prt("sth_create($name)\n", 2) ;
+$this->_dbg_prt(["sth_create($name)\n"], 2) ;
 	
 	## Guess command based on name
 	my $cmd = $this->_sql_cmd($name) ;
 
-$this->_dbg_prt(" + cmd=$cmd\n", 2) ;
+$this->_dbg_prt([" + cmd=$cmd\n"], 2) ;
 	
 	## Handle hash
 	if (ref($spec) eq 'HASH')
@@ -738,7 +751,7 @@ $this->_dbg_prt(" + cmd=$cmd\n", 2) ;
 
 $this->_dbg_prt(["Vars=", \%vars], 2) ;
 
-$this->_dbg_prt("+ expand vars\n", 2) ;
+$this->_dbg_prt(["+ expand vars\n"], 2) ;
 
 	## Run through all vars and expand them
 	$this->_sql_expand_vars(\%vars) ;
@@ -850,11 +863,6 @@ sub sth_query
 			my $vals = join(', ', @args, @vals) ;
 			$this->throw_fatal("STH \"$name\"execute error $@\nQuery=$query\nValues=$vals", 1) if $@ ;
 		}
-	
-#		$this->_dbg_prt("Sql::sth_query($query) => sth=$sth\n", 2) ;
-			
-		# Save handle for later
-#		$this->_result($sth) ;
 	}
 
 	return $this ;
@@ -943,7 +951,6 @@ sub do
 	my ($sql) = @_ ;
 	
 	my $dbh = $this->connect() ;
-#	my $dbh = $this->dbh() ;
 
 	# Do query
 	eval
@@ -998,20 +1005,9 @@ sub next
 	my $sth = $this->_sth_record_sth($name) ;
 	my $href = $sth->fetchrow_hashref() ;
 
-	$this->_dbg_prt("Sql::next() => sth=$sth : record=".$href."\n") ;
+	$this->_dbg_prt(["Sql::next() => sth=",$sth, " : record=",$href,"\n"]) ;
 	
 	return $href ;
-
-	
-#	my $sth = $this->_result() ;
-#
-#	# Get row and save it
-#	$this->_record($sth->fetchrow_hashref() || 0) ;
-#
-#	$this->_dbg_prt("Sql::next() => sth=$sth : record=".$this->_record()."\n") ;
-#	
-#	# return result
-#	return ($this->_record() || undef) ;
 }
 
 #----------------------------------------------------------------------------
@@ -1166,122 +1162,6 @@ sub sql_from_data
 
 
 
-#    /**
-#     * query the database
-#     *
-#     * @param string $query the SQL query
-#     * @param string $type the type of query
-#     * @param string $format the query format
-#     */
-#    function query($query, $type = SQL_NONE, $format = SQL_ASSOC) 
-#    {
-#
-#		$this->record = array();
-#		$_data = array();
-#        
-#		// determine fetch mode (index or associative)
-#        $_fetchmode = ($format == SQL_ASSOC) ? DB_FETCHMODE_ASSOC : null;
-#        
-#        $this->result = $this->db->query($query);
-#        if (DB::isError($this->result)) {
-#            $this->error = $this->result->getMessage();
-#            $this->error .= "\nQuery: $query\n" ;
-#            return false;
-#        }
-#        switch ($type) {
-#            case SQL_ALL:
-#				// get all the records
-#                while($_row = $this->result->fetchRow($_fetchmode)) {
-#                    $_data[] = $_row;   
-#                }
-#                $this->result->free();            
-#                $this->record = $_data;
-#                break;
-#            case SQL_INIT:
-#				// get the first record
-#                $this->record = $this->result->fetchRow($_fetchmode);
-#                break;
-#            case SQL_NONE:
-#            default:
-#				// records will be looped over with next()
-#                break;   
-#        }
-#        return true;
-#    }
-#    
-#    /**
-#     * Get next row
-#     *
-#     * @param string $format the query format
-#     */
-#    function next($format = SQL_ASSOC) 
-#    {
-#		// fetch mode (index or associative)
-#        $_fetchmode = ($format == SQL_ASSOC) ? DB_FETCHMODE_ASSOC : null;
-#        if ($this->record = $this->result->fetchRow($_fetchmode)) {
-#            return $this->record;
-#        } else {
-#            $this->result->free();
-#            return false;
-#        }
-#            
-#    }
-#    
-#    /**
-#     * Return full Sql error/warning message
-#     *
-#     */
-#    function error_message() 
-#    {
-#//    	$message = '' ;
-#//		$message .= "Sql Error:" . $this->db->getMessage() . "\n";
-#//		$message .= "'Standard Code: " . $this->db->getCode() . "\n";
-#//		$message .= "DBMS/User Message: " . $this->db->getUserInfo() . "\n";
-#//		$message .= "DBMS/Debug Message: " . $this->db->getDebugInfo() . "\n";
-#//		return $message ;
-#return $this->error ;            
-#    }
-#
-#	# Convert SQL based date (YYYY-MM-DD) to standard date string (d-MMM-YYYY)
-#	function sqldate_to_datestr($sqldate)
-#	{
-#		list($year, $month, $day) = explode('-',$sqldate);
-#
-#// int mktime ( [int hour [, int minute [, int second [, int month [, int day [, int year [, int is_dst]]]]]]] )
-#
-#		$time = mktime(0,0,0,1*$month,1*$day,1*$year) ;
-#		$datestr = date("d-M-Y", $time) ;
-#	
-#		return $datestr ;
-#	}
-#	
-#	# Convert standard date string (d-MMM-YYYY) to SQL based date (YYYY-MM-DD)
-#	function datestr_to_sqldate($datestr)
-#	{
-#		list($day, $month, $year) = explode('-',$datestr);
-#		$time = mktime(0,0,0,$month,$day,$year) ;
-#		$datestr = date("d-M-Y", $time) ;
-#	
-#		return $datestr ;
-#	}
-#	
-#	
-#	# Convert SQL based date (YYYY-MM-DD) to timestamp
-#	function sqldate_to_date($sqldate)
-#	{
-#		return strtotime(sqldate_to_datestr($sqldate)) ;
-#	}
-#	
-#	
-#	# Convert SQL based time (HH:MM:SS) to standard time string (HH:MM)
-#	function sqltime_to_timestr($sqltime)
-#	{
-#		list($hours, $mins, $secs) = explode(':',$sqltime);
-#		return sprintf("%02d:%02d", $hours, $mins) ;
-#	}
-
-
-
 
 # ============================================================================================
 # PRIVATE METHODS
@@ -1329,7 +1209,7 @@ sub _sql_setvars
 	my $this = shift ;
 	my ($context, $spec, $vars_href) = @_ ;
 
-$this->_dbg_prt(" > _sql_setvars($context)\n", 2) ;
+$this->_dbg_prt([" > _sql_setvars($context)\n"], 2) ;
 
 
 	## Start by getting control info from %CMD_SQL if possible
@@ -1351,7 +1231,7 @@ $this->_dbg_prt(" > _sql_setvars($context)\n", 2) ;
 		$vars_href->{"\@${var}"} = $CMD_SQL{$context}{'vals'} if exists($CMD_SQL{$context}{'vals'}) ; 
 	}
 
-$this->_dbg_prt(" > + var=$var format=$format\n", 2) ;
+$this->_dbg_prt([" > + var=$var format=$format\n"], 2) ;
 
 	## Handle hash
 	if (ref($spec) eq 'HASH')
@@ -1394,24 +1274,35 @@ $this->_dbg_prt(" > + var=$var format=$format\n", 2) ;
 			}
 		}
 		
-		# Handle any vals
+		## Handle any vals
+		
+		# default to object field
+		my $vals_ref = $this->sql_vars ;
+		
+		# see if user specified any
 		if (exists($spec{'vals'}))
 		{
 			# create set of lists within this context namespace
-			my $vals_ref = delete $spec{'vals'} ;
+			$vals_ref = delete $spec{'vals'} ;
+		}
 
+$this->_dbg_prt([" > VALS : vals_ref=",$vals_ref," internal=", $this->sql_vars,"\n"], 2) ;
+		
+		# handle vals reference
+		if ($vals_ref)
+		{
 			# TODO: error report
 
 			## Array
 			my $array_name = "\@${var}_vals" ;
 			$vars_href->{$array_name} = [] ; 
 
-$this->_dbg_prt(" > + + VALS : array=$array_name, vals_ref=$vals_ref\n", 2) ;
+$this->_dbg_prt([" > + + VALS : array=$array_name, vals_ref=$vals_ref\n"], 2) ;
 
 
 			if (ref($vals_ref) eq 'ARRAY')
 			{
-$this->_dbg_prt(" > + + + adding array\n", 2) ;
+$this->_dbg_prt([" > + + + adding array\n"], 2) ;
 				foreach (my $idx=0; $idx < scalar(@$vals_ref); ++$idx)
 				{
 					## Store the HASH ref for ALL variables. Then, when we access the values, they will be the latest
@@ -1424,10 +1315,10 @@ $this->_dbg_prt(" > + + + adding array\n", 2) ;
 			}
 			elsif (ref($vals_ref) eq 'HASH')
 			{
-$this->_dbg_prt(" > + + + adding hash\n", 2) ;
+$this->_dbg_prt([" > + + + adding hash\n"], 2) ;
 				foreach my $var (@$vars_aref)
 				{
-$this->_dbg_prt(" > + + + + $var=$vars_href->{$var}\n", 2) ;
+$this->_dbg_prt([" > + + + + $var=", $vars_href->{$var}, "\n"], 2) ;
 #					$vals_ref->{$var} ||= '' ;
 #					push @{$vars_href->{$array_name}}, \$vals_ref->{$var} ; 
 
@@ -1448,13 +1339,13 @@ $this->_dbg_prt(" > + + + + $var=$vars_href->{$var}\n", 2) ;
 			$format = delete $spec{'sql'} ;
 		}
 
-$this->_dbg_prt(" > + processing hash ...\n", 2) ;
+$this->_dbg_prt([" > + processing hash ...\n"], 2) ;
 #$this->prt_data("spec=", \%spec) ;
 		
 		## cycle through the other hash keys to produce other variables
 		foreach my $var (keys %spec)
 		{
-$this->_dbg_prt(" > + + $var = $spec{$var}\n", 2) ;
+$this->_dbg_prt([" > + + $var = $spec{$var}\n"], 2) ;
 
 			$this->_sql_setvars($var, $spec{$var}, $vars_href) ;
 		}
@@ -1467,12 +1358,12 @@ $this->_dbg_prt(" > + + $var = $spec{$var}\n", 2) ;
 		## String
 		$format = $spec ;
 		
-$this->_dbg_prt(" > + spec is string : format=$format\n", 2) ;
+$this->_dbg_prt([" > + spec is string : format=$format\n"], 2) ;
 
 
 	}
 
-$this->_dbg_prt(" > Now: prefix=$prefix , format=$format\n", 2) ;
+$this->_dbg_prt([" > Now: prefix=$prefix , format=$format\n"], 2) ;
 
 
 	## Ensure prefix is present
@@ -1481,7 +1372,7 @@ $this->_dbg_prt(" > Now: prefix=$prefix , format=$format\n", 2) ;
 		# Use prefix if necessary
 		unless ($format =~ m/^\s*$context/i)
 		{
-$this->_dbg_prt(" > + + Adding prefix=$prefix to format=$format\n", 2) ;
+$this->_dbg_prt([" > + + Adding prefix=$prefix to format=$format\n"], 2) ;
 			$format = "$prefix $format" ;
 		}
 	}
@@ -1489,7 +1380,7 @@ $this->_dbg_prt(" > + + Adding prefix=$prefix to format=$format\n", 2) ;
 	# Set var
 	$vars_href->{$var} = $format ;
 
-$this->_dbg_prt(" > _sql_setvars($context) - END [format=$format]\n", 2) ;
+$this->_dbg_prt([" > _sql_setvars($context) - END [format=$format]\n"], 2) ;
 
 }
 
@@ -1506,7 +1397,7 @@ sub _sql_expand_vars
 	my $this = shift ;
 	my ($vars_href) = @_ ;
 
-$this->_dbg_prt("_sql_expand_vars()\n", 2) ;
+$this->_dbg_prt(["_sql_expand_vars()\n"], 2) ;
 $this->_dbg_prt(["vars", \$vars_href], 2) ;
 
 
@@ -1519,13 +1410,13 @@ $this->_dbg_prt(["vars", \$vars_href], 2) ;
 		# skip if empty
 		next unless $vars_href->{$var} ;
 
-$this->_dbg_prt(" + $var\n", 2) ;
+$this->_dbg_prt([" + $var\n"], 2) ;
 		
 		# Keep replacing until all variables have been expanded
 		my $ix = index $vars_href->{$var}, '$' ;
 		while ($ix >= 0)
 		{
-$this->_dbg_prt(" + + ix=$ix : $var = $vars_href->{$var}\n", 2) ;
+$this->_dbg_prt([" + + ix=$ix : $var = $vars_href->{$var}\n"], 2) ;
 
 
 			# At least 1 more variable to replace, so replace it
@@ -1544,12 +1435,12 @@ $this->_dbg_prt(" + + ix=$ix : $var = $vars_href->{$var}\n", 2) ;
 
 		$ix = index $vars_href->{$var}, '$' ;
 
-$this->_dbg_prt(" + + + $var = $vars_href->{$var}\n", 2) ;
+$this->_dbg_prt([" + + + $var = $vars_href->{$var}\n"], 2) ;
 			
 		}
 	}
 
-$this->_dbg_prt("_sql_expand_vars - END\n", 2) ;
+$this->_dbg_prt(["_sql_expand_vars - END\n"], 2) ;
 
 }
 
@@ -1566,13 +1457,13 @@ sub _sql_expand_arrays
 	my $this = shift ;
 	my ($vars_href) = @_ ;
 
-$this->_dbg_prt("_sql_expand_arrays()\n", 2) ;
+$this->_dbg_prt(["_sql_expand_arrays()\n"], 2) ;
 $this->_dbg_prt(["vars", \$vars_href], 2) ;
 
 	# do all vars in HASH
 	foreach my $var (keys %$vars_href)
 	{
-$this->_dbg_prt(" + $var=$vars_href->{$var}\n", 2) ;
+$this->_dbg_prt([" + $var=", $vars_href->{$var}, "\n"], 2) ;
 
 		# skip variables that aren't named @....
 		next unless $var =~ /^\@/ ;
@@ -1584,7 +1475,7 @@ $this->_dbg_prt(" + $var=$vars_href->{$var}\n", 2) ;
 		$this->_sql_expand_array($var, $vars_href) ;
 	}
 
-$this->_dbg_prt("_sql_expand_arrays() - END\n", 2) ;
+$this->_dbg_prt(["_sql_expand_arrays() - END\n"], 2) ;
 
 }
 
@@ -1601,7 +1492,7 @@ sub _sql_expand_array
 	my $this = shift ;
 	my ($array, $vars_href) = @_ ;
 
-$this->_dbg_prt("_sql_expand_array($array)\n", 2) ;
+$this->_dbg_prt(["_sql_expand_array($array)\n"], 2) ;
 
 	# skip if already an array
 	unless (ref($vars_href->{$array}) eq 'ARRAY')
@@ -1614,27 +1505,27 @@ $this->_dbg_prt("_sql_expand_array($array)\n", 2) ;
 			# start array off
 			$vars_href->{$array} = [] ;
 	
-	$this->_dbg_prt(" -- setting array\n", 2) ;
+	$this->_dbg_prt([" -- setting array\n"], 2) ;
 	
 			# process them
 			foreach my $arr (@arr_list)
 			{
-	$this->_dbg_prt(" -- -- get $arr\n", 2) ;
+	$this->_dbg_prt([" -- -- get $arr\n"], 2) ;
 	
 				# if reference to another array, evaluate it
 				if ($arr =~ /^\@/)
 				{
-	$this->_dbg_prt(" -- -- -- expand $arr\n", 2) ;
+	$this->_dbg_prt([" -- -- -- expand $arr\n"], 2) ;
 					my $arr_aref = $this->_sql_expand_array($arr, $vars_href) ;
 					
-	$this->_dbg_prt(" -- -- -- push array $arr=$arr_aref\n", 2) ;
+	$this->_dbg_prt([" -- -- -- push array $arr=", $arr_aref, "\n"], 2) ;
 	
 					# Add to list
 					push @{$vars_href->{$array}}, @$arr_aref if $arr_aref ;
 				}
 				else
 				{
-	$this->_dbg_prt(" -- -- -- push value $arr\n", 2) ;
+	$this->_dbg_prt([" -- -- -- push value ", $arr, "\n"], 2) ;
 					# Add to list
 					push @{$vars_href->{$array}}, $arr ;
 				}			
@@ -1643,7 +1534,7 @@ $this->_dbg_prt("_sql_expand_array($array)\n", 2) ;
 	}
 
 $this->_dbg_prt(["ARRAY $array=", $vars_href->{$array}], 2) ;
-$this->_dbg_prt("_sql_expand_array($array) - END\n", 2) ;
+$this->_dbg_prt(["_sql_expand_array($array) - END\n"], 2) ;
 
 	return ($vars_href->{$array}) ;
 }
@@ -1661,6 +1552,13 @@ sub _sth_record
 {
 	my $this = shift ;
 	my ($name) = @_ ;
+
+	# error check
+	if (!$name)
+	{
+		$this->dump_callstack() if $this->debug() ;
+		$this->throw_fatal("Attempting to find prepared statement but no name has been specified") unless $name ;				
+	}
 
 	my $sth_href = $this->_sth() ;
 	if (exists($sth_href->{$name}))

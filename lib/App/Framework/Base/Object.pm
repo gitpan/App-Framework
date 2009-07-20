@@ -34,7 +34,7 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "1.009" ;
+our $VERSION = "2.001" ;
 our $AUTOLOAD ;
 
 #============================================================================================
@@ -59,10 +59,6 @@ my @SPECIAL_FIELDS = qw/
 my %COMMON_FIELDS = (
 	'debug'			=> undef,		# pseudo field
 	'verbose'		=> undef,		# pseudo field
-#	'debug_level'	=> 0,
-#	'verbose_level'	=> 0,
-#	'debug_pkg'		=> '',
-#	'verbose_pkg'	=> '',
 ) ;
 
 # Constant
@@ -110,7 +106,8 @@ sub new
 {
 	my ($obj, %args) = @_ ;
 
-	my $class = $obj->class() ;
+	my $class = ref($obj) || $obj ;
+	#my $class = $obj->class() ;
 
 	print "== Object: Creating new $class object ========\n" if $global_debug ; 
 	prt_data("ARGS=", \%args, "\n") if $global_debug>=2 ;
@@ -155,11 +152,16 @@ sub init
 
 	prt_data("init() ARGS=", \%args, "\n") if $global_debug>=3 ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	##my $class = ref($this) || $this ;
     $this = $this->check_instance() ;
 	
 	# Defaults
-	my %field_list = $this->field_list() ;
+##	my %field_list = $this->field_list() ;
+	my $class = ref($this) || $this ;
+	my %field_list = ();
+	%field_list = %{ $FIELD_LIST{$class} } if exists($FIELD_LIST{$class}) ;
+	
 
 	# May have default value for some or all fields
 	my %field_copy ;
@@ -217,7 +219,8 @@ sub init_class
 	my $this = shift ;
 	my (%args) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
 
 	prt_data("init_class() ARGS=", \%args, "\n") if $global_debug>=3 ;
 #prt_data("init_class() ARGS (LIST)=", \@_, "\n") ;
@@ -262,6 +265,51 @@ print " + fields=$fields ref()=", ref($fields), "\n" if $global_debug>=4 ;
 			
 			$FIELD_LIST{$class} = $class_fields_href ;
 		}
+
+## NEW
+
+# create accessors
+my $code = "package $class;\n" ;
+foreach my $field (keys %{$FIELD_LIST{$class}})
+{
+	if (!$class->can($field))
+	{
+		$code .= qq{
+			## get / set
+	        sub $field 
+	        {
+				my \$this = shift ;
+	            \@_  ? \$this->{$field} = \$_[0]  # set
+	                 : \$this->{$field};          # get
+	        }
+	    };
+	}	
+
+	if (!$class->can("undef_$field"))
+	{
+		$code .= qq{
+			## undefine
+	        sub undef_$field 
+	        {
+				my \$this = shift ;
+				
+	            \$this->{$field} = undef ;
+	        }
+	    };
+	}	
+}
+
+print "Created Accessors:\n$code\n" if $global_debug>=4 ;
+
+    eval $code;
+    if ($@) {
+       die  "ERROR defining accessors for '$class':" 
+            . "\n\t$@\n" 
+            . "-----------------------------------------------------\n"
+            . $code;
+    }
+
+## NEW
 
 
 		## Create private fields
@@ -322,7 +370,7 @@ sub init_class_instance
 }
 
 #----------------------------------------------------------------------------
-# Return fields hash
+# Return global fields hash
 sub _field_list
 {
 	my $class = shift ;
@@ -351,7 +399,8 @@ sub global_debug
 	my $this = shift ;
 	my ($flag) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	##my $class = ref($this) || $this ;
 
 	my $old = $global_debug ;
 	$global_debug = $flag if defined($flag) ;
@@ -378,7 +427,8 @@ sub global_verbose
 	my $this = shift ;
 	my ($flag) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	##my $class = ref($this) || $this ;
 
 	my $old = $global_verbose ;
 	$global_verbose = $flag if defined($flag) ;
@@ -399,7 +449,8 @@ sub strict_fields
 	my $this = shift ;
 	my ($flag) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	##my $class = ref($this) || $this ;
 
 	my $old = $strict_fields ;
 	$strict_fields = $flag if defined($flag) ;
@@ -421,7 +472,8 @@ sub class_instance
 	my $this = shift ;
 	my (@args) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
 
 	if ($class->allowed_class_instance() && !$class->has_class_instance())
 	{
@@ -448,7 +500,8 @@ Returns true if this class has a class instance object
 sub has_class_instance
 {
 	my $this = shift ;
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
 
 #prt_data("has_class_instance($class) CLASS_INSTANCE=", \%CLASS_INSTANCE) if $global_debug>=5 ;
 
@@ -480,7 +533,8 @@ sub field_list
 {
 	my $this = shift ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
 	
 	my $href ;
 	$href = $FIELD_LIST{$class} if exists($FIELD_LIST{$class}) ;
@@ -492,44 +546,6 @@ sub field_list
 #============================================================================================
 # OBJECT DATA METHODS 
 #============================================================================================
-
-#----------------------------------------------------------------------------
-
-=item B<debug_new(level)>
-
-Set debug print options to I<level>. 
-
-
-=cut
-
-sub debug_new
-{
-	my $this = shift ;
-	my ($level) = @_ ;
-
-	my $class = $this->class() ;
-
-#print "debug($level) class=$class\n" ;
-
-	if (defined $level)
-	{
-		# set level and class that it was set for
-		$this->debug_level($level) ;
-		$this->debug_pkg($class) ;
-#print " + set debug=$level pkg=$class\n" ;
-	}
-	
-	# get level and class set at
-	my $debug_level = $this->debug_level() ;
-	my $debug_pkg = $this->debug_pkg() || '' ;
-#print " + get debug=$debug_level pkg=$debug_pkg\n" ;
-
-	# if class read at is not class set at, then don't debug
-	$debug_level = 0 unless $class eq $debug_pkg ;
-#print " + ret debug=$debug_level (pkg=$debug_pkg class=$class)\n" ;
-	
-	return $debug_level ;
-}
 
 #----------------------------------------------------------------------------
 
@@ -545,7 +561,9 @@ sub debug
 	my $this = shift ;
 	my ($level) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
+#print "In debug() for $class\n" ;
 
 	$DEBUG{$class} ||= 0 ;
 	my $old = $DEBUG{$class} ;
@@ -554,43 +572,31 @@ sub debug
 	return $old ;
 }
 
-
 #----------------------------------------------------------------------------
 
-=item B<verbose_new(level)>
+=item B<undef_debug()>
 
-Set verbose print level to I<level>. 
+Set debug print options flag to undefined. 
 
-	0 = None verbose
-	1 = verbose information
-	2 = print commands
-	3 = print command results
 
 =cut
 
-sub verbose_new
+sub undef_debug
 {
 	my $this = shift ;
 	my ($level) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
+#print "In undef_debug() for $class\n" ;
 
-	if (defined $level)
-	{
-		# set level and class that it was set for
-		$this->verbose_level($level) ;
-		$this->verbose_pkg($class) ;
-	}
-	
-	# get level and class set at
-	my $verbose_level = $this->verbose_level() ;
-	my $verbose_pkg = $this->verbose_pkg() ;
+	$DEBUG{$class} ||= 0 ;
+	my $old = $DEBUG{$class} ;
+	$DEBUG{$class} = undef ;
 
-	# if class read at is not class set at, then don't verbose
-	$verbose_level = 0 unless $class eq $verbose_pkg ;
-	
-	return $verbose_level ;
+	return $old ;
 }
+
 
 #----------------------------------------------------------------------------
 
@@ -606,13 +612,63 @@ sub verbose
 	my $this = shift ;
 	my ($level) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
+#print "In verbose() for $class\n" ;
 
 	$VERBOSE{$class} ||= 0 ;
 	my $old = $VERBOSE{$class} ;
 	$VERBOSE{$class} = $level if defined($level) ;
 
 	return $old ;
+}
+
+#----------------------------------------------------------------------------
+
+=item B<undef_verbose()>
+
+Set verbose print options flag to undefined. 
+
+
+=cut
+
+sub undef_verbose
+{
+	my $this = shift ;
+	my ($level) = @_ ;
+
+	#my $class = $this->class() ;
+	my $class = ref($this) || $this ;
+#print "In undef_verbose() for $class\n" ;
+
+	$DEBUG{$class} ||= 0 ;
+	my $old = $DEBUG{$class} ;
+	$DEBUG{$class} = undef ;
+
+	return $old ;
+}
+
+#----------------------------------------------------------------------------
+
+=item B<field_access($field, [$val])>
+
+Get/set a field value. Used by derived objects to get/set the underlying object field
+variable when they have overridden that field's access method.
+
+=cut
+
+sub field_access
+{
+	my $this = shift ;
+	my ($field, $value) = @_ ;
+
+	my $class = ref($this) || $this ;
+	my %field_list = ();
+	%field_list = %{ $FIELD_LIST{$class} } if exists($FIELD_LIST{$class}) ;
+	$this->throw_fatal("Attempting to access an invalid field \"$field\" for this object class \"$class\" ") unless (exists($field_list{$field})) ;
+
+	$this->{$field} = $value if defined($value) ;
+	return $this->{$field} ;
 }
 
 
@@ -642,16 +698,18 @@ sub set
 	prt_data("set() ARGS=", \%args, "\n") if $global_debug>=3 ;
 
     $this = $this->check_instance() ;
-	my $class = $this->class() ;
 	
 	# Args
-	my %field_list = $this->field_list() ;
+##	my %field_list = $this->field_list() ;
+	my $class = ref($this) || $this ;
+	my %field_list = ();
+	%field_list = %{ $FIELD_LIST{$class} } if exists($FIELD_LIST{$class}) ;
+
 	foreach my $field (keys %field_list)
 	{
 		if (exists($args{$field})) 
 		{
 			print " + set $field = $args{$field}\n" if $global_debug>=3 ;
-
 
 			# Need to call actual method (rather than ___set) so that it can be overridden
 			if (!defined($args{$field}))
@@ -700,7 +758,11 @@ sub vars
 	my $this = shift ;
 	my (@names) = @_ ;
 
-	my %field_list = $this->field_list() ;
+##	my %field_list = $this->field_list() ;
+	my $class = ref($this) || $this ;
+	my %field_list = ();
+	%field_list = %{ $FIELD_LIST{$class} } if exists($FIELD_LIST{$class}) ;
+
 	my %fields ;
 
 #prt_data("vars() names=", \@names) ;
@@ -768,10 +830,11 @@ sub check_instance
 	my $this = shift ;
 	my (%args) = @_ ;
 
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
 	
 	if (!ref($this))
 	{
+		my $class = ref($this) || $this ;
 		if ($class->has_class_instance())
 		{
 			$this = $class->class_instance() ;
@@ -875,7 +938,7 @@ sub quote_str
 	my $this = shift ;
 	my ($str) = @_ ;
 	
-	my $class = $this->class() ;
+	##my $class = $this->class() ;
 
 	# skip on Windows machines
 	unless ($^O eq 'MSWin32')
@@ -1014,13 +1077,25 @@ sub ___set
 	my $this = shift ;
 	my ($field, $new_value) = @_ ;
 
-	my $class = $this->class() ;
+## NEW	
+print "Unexpected ___set($field, $new_value)\n" ;
+$this->dump_callstack() ;
+## NEW	
+
+
+	#my $class = $this->class() ;
 	my $value ;
 
 	# Check that field name is valid
-	my %field_list = $this->field_list() ;
+##	my %field_list = $this->field_list() ;
+	my $class = ref($this) || $this ;
+	my %field_list = ();
+	%field_list = %{ $FIELD_LIST{$class} } if exists($FIELD_LIST{$class}) ;
+
 	if (!exists($field_list{$field}))
 	{
+##		my $class = ref($this) || $this ;
+
 		prt_data("$class : ___set($field) invalid field. Valid fields=", \%field_list) if $global_debug>=5 ;
 		$this->dump_callstack() if $global_debug>=10 ;
 
@@ -1050,12 +1125,24 @@ sub ___get
 
 	my $value ;
 	
-	my $class = $this->class() ;
+	#my $class = $this->class() ;
+
+## NEW	
+print "Unexpected ___get($field)\n" ;
+$this->dump_callstack() ;
+## NEW	
+
 
 	# Check that field name is valid
-	my %field_list = $this->field_list() ;
+##	my %field_list = $this->field_list() ;
+	my $class = ref($this) || $this ;
+	my %field_list = ();
+	%field_list = %{ $FIELD_LIST{$class} } if exists($FIELD_LIST{$class}) ;
+
 	if (!exists($field_list{$field}))
 	{
+##		my $class = ref($this) || $this ;
+
 		prt_data("$class : ___get($field) invalid field. Valid fields=", \%field_list) if $global_debug>=5 ;
 prt_data("$class : ___get($field) invalid field. Valid fields=", \%field_list) ;
 		$this->dump_callstack() if $global_debug>=10 ;
@@ -1086,6 +1173,11 @@ $this->dump_callstack() ;
 sub AUTOLOAD 
 {
 	print "AUTOLOAD ($AUTOLOAD)\n" if $global_debug>=5 ;
+
+## NEW	
+my $caller = (caller())[0] ;
+print "Unexpected AUTOLOAD ($AUTOLOAD) from $caller\n" ;
+## NEW	
 
     my $this = shift;
 #	prt_data("AUTOLOAD ($AUTOLOAD) this=", $this) if $global_debug>=5 ;

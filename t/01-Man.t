@@ -29,7 +29,6 @@ my $VERBOSE=0;
 	) ;
 
 	my @expected = (
-           '-log',           
            '-verbose',             
            '-norun',            
            '-debug',            
@@ -54,9 +53,11 @@ my $VERBOSE=0;
 		plan skip_all => 'Unable to redirect stdout (I need to redirect to check the man pages)';
 		exit 0 ;
 	}
-
-	## ok to run tests
-	plan tests => scalar(@man) + scalar(@expected) ;
+	else
+	{
+		## ok to run tests
+		plan tests => scalar(@man) + scalar(@expected) ;
+	}
 	
 	## Manual pages
 

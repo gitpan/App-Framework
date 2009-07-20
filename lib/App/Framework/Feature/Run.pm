@@ -161,7 +161,7 @@ use Carp ;
 
 use File::Which ;
 
-our $VERSION = "1.006" ;
+our $VERSION = "1.007" ;
 
 #============================================================================================
 # USES
@@ -279,6 +279,7 @@ my %FIELDS = (
 	'args'		=> undef,
 	'timeout'	=> undef,
 	'nice'		=> undef,
+	'dryrun'	=> 0,
 	
 	'on_error'	=> $ON_ERROR_DEFAULT,
 	'error_str'	=> "",
@@ -292,6 +293,16 @@ my %FIELDS = (
 	
 	# Options/flags
 	'norun'		=> 0,
+	
+	'log'		=> {
+		'all'		=> 0,
+		'cmd'		=> 0,
+		'results'	=> 0,
+		'status'	=> 0,
+	},
+	
+	## Private
+	'_logobj'	=> undef,
 ) ;
 
 #============================================================================================
@@ -394,7 +405,8 @@ sub required
 	my $this = shift ;
 	my ($new_required_href) = @_ ;
 	
-	my $required_href = $this->SUPER::required($new_required_href) ;
+##	my $required_href = $this->SUPER::required($new_required_href) ;
+	my $required_href = $this->field_access('required', $new_required_href) ;
 	if ($new_required_href)
 	{
 		## Test for available executables
@@ -404,7 +416,7 @@ sub required
 		}
 		
 		## check for errors
-		my $throw = $this->_throw_on_error ;
+		my $throw = $this->_throw_on_error($this->on_error) ;
 		if ($throw)
 		{
 			my $error = "" ;
@@ -484,7 +496,7 @@ sub run
 	# See if this is a class call
 	$this = $this->check_instance() ;
 
-$this->_dbg_prt(["run() this=", $this], 0) ;
+$this->_dbg_prt(["run() this=", $this], 2) ;
 $this->_dbg_prt(["run() args=", \@args]) ;
 
 	my %args ;
@@ -512,18 +524,41 @@ $this->_dbg_prt(["run() args=", \@args]) ;
 	
 	## return immediately if no args
 	return $this unless %args ;
-	
+
+	## If associated with an app, then see if Logging is enabled
+	my $app = $this->app ;
+	if ($app)
+	{
+		my $logging = $app->feature_installed('Logging') ;
+		$this->_logobj($logging) ;
+	}
+
+	## create local copy of variables
+	my %local = $this->vars() ;
 	
 	# Set any specified args
-	$this->set(%args) if %args ;
+	foreach my $key (keys %local)
+	{
+		$local{$key} = $args{$key} if exists($args{$key}) ;
+	}
+	
+	## set any 'special' vars
+	my %set ;
+	foreach my $key (qw/debug/)
+	{
+		$set{$key} = $args{$key} if exists($args{$key}) ;
+	}
+	$this->set(%set) if keys %set ;
 	
 
 	# Get command
-	my $cmd = $this->cmd() ;
+#	my $cmd = $this->cmd() ;
+	my $cmd = $local{'cmd'} ;
 	$this->throw_fatal("command not specified") unless $cmd ;
 	
 	# Add niceness
-	my $nice = $this->nice() ;
+#	my $nice = $this->nice() ;
+	my $nice = $local{'nice'} ;
 	if (defined($nice))
 	{
 		$cmd = "nice -n $nice $cmd" ;
@@ -539,35 +574,57 @@ $this->_dbg_prt(["run() args=", \@args]) ;
 	
 
 	# Check arguments
-	my $args = $this->_check_args() ;
+	my $args = $this->_check_args($local{'args'}) ;
 
 	# Run command and save results
 	my @results ;
 	my $rc ;
 
-	my $timeout = $this->timeout() ;
-	if (defined($timeout))
+	## Logging
+	my $logopts_href = $this->log ;
+	my $logging = $this->_logobj ;		
+
+	$logging->logging("RUN: $cmd $args\n") if $logging && ($logopts_href->{all} || $logopts_href->{cmd}) ;
+
+
+#	my $timeout = $this->timeout() ;
+	my $timeout = $local{'timeout'} ;
+	if ($local{'dryrun'})
 	{
-		# Run command with timeout
-		($rc, @results) = $this->_run_timeout($cmd, $args, $timeout) ;		
+		## Print
+		my $timeout_str = $timeout ? "[timeout after $timeout secs]" : "" ;
+		print "RUN: $cmd $args $timeout_str\n" ;
 	}
 	else
 	{
-		# run command
-		($rc, @results) = $this->_run_cmd($cmd, $args) ;		
+		## Run
+		
+		if (defined($timeout))
+		{
+			# Run command with timeout
+			($rc, @results) = $this->_run_timeout($cmd, $args, $timeout, $local{'progress'}, $local{'check_results'}) ;		
+		}
+		else
+		{
+			# run command
+			($rc, @results) = $this->_run_cmd($cmd, $args, $local{'progress'}, $local{'check_results'}) ;		
+		}
 	}
 
 	# Update vars
 	$this->status($rc) ;
 	chomp foreach (@results) ;
 	$this->results(\@results) ;
+
+	$logging->logging(\@results) if $logging && ($logopts_href->{all} || $logopts_href->{results}) ;
+	$logging->logging("Status: $rc\n") if $logging && ($logopts_href->{all} || $logopts_href->{status}) ;
 	
 	## Handle non-zero exit status
-	my $throw = $this->_throw_on_error ;
+	my $throw = $this->_throw_on_error($local{'on_error'}) ;
 	if ($throw)
 	{
 		my $results = join("\n", @results) ;
-		my $error_str = $this->error_str ;
+		my $error_str = $local{'error_str'} ;
 		$this->$throw("Command \"$cmd $args\" exited with non-zero error status $rc : $error_str\n$results\n") ;
 	}
 	
@@ -584,59 +641,59 @@ Alias to L</run>
 
 *Run = \&run ;
 
-#--------------------------------------------------------------------------------------------
-
-=item B<print_run([args])>
-
-DEBUG: Display the full command line as if it was going to be run
-
-NOTE: Need to get B<run> object from application to access this method. 
-
-=cut
-
-sub print_run
-{
-	my $this = shift ;
-	my (@args) = @_ ;
-
-	# See if this is a class call
-	$this = $this->check_instance() ;
-
-	my %args ;
-	if (@args == 1)
-	{
-		$args{'cmd'} = $args[0] ;
-	}
-	elsif (@args == 2)
-	{
-		if ($args[0] ne 'cmd')
-		{
-			# not 'cmd' => '....' so treat as ($cmd, $args)
-			$args{'cmd'} = $args[0] ;
-			$args{'args'} = $args[1] ;
-		}
-		else
-		{
-			%args = (@args) ;
-		}
-	}
-	else
-	{
-		%args = (@args) ;
-	}
-	
-	# Set any specified args
-	$this->set(%args) if %args ;
-
-	# Get command
-	my $cmd = $this->cmd() ;
-	$this->throw_fatal("command not specified") unless $cmd ;
-	
-	# Check arguments
-	my $args = $this->_check_args() ;
-
-	print "$cmd $args\n" ;
-}
+##--------------------------------------------------------------------------------------------
+#
+#=item B<print_run([args])>
+#
+#DEBUG: Display the full command line as if it was going to be run
+#
+#NOTE: Need to get B<run> object from application to access this method. 
+#
+#=cut
+#
+#sub print_run
+#{
+#	my $this = shift ;
+#	my (@args) = @_ ;
+#
+#	# See if this is a class call
+#	$this = $this->check_instance() ;
+#
+#	my %args ;
+#	if (@args == 1)
+#	{
+#		$args{'cmd'} = $args[0] ;
+#	}
+#	elsif (@args == 2)
+#	{
+#		if ($args[0] ne 'cmd')
+#		{
+#			# not 'cmd' => '....' so treat as ($cmd, $args)
+#			$args{'cmd'} = $args[0] ;
+#			$args{'args'} = $args[1] ;
+#		}
+#		else
+#		{
+#			%args = (@args) ;
+#		}
+#	}
+#	else
+#	{
+#		%args = (@args) ;
+#	}
+#	
+#	# Set any specified args
+#	$this->set(%args) if %args ;
+#
+#	# Get command
+#	my $cmd = $this->cmd() ;
+#	$this->throw_fatal("command not specified") unless $cmd ;
+#	
+#	# Check arguments
+#	my $args = $this->_check_args() ;
+#
+#	print "$cmd $args\n" ;
+#}
 
 
 # ============================================================================================
@@ -650,11 +707,11 @@ sub print_run
 sub _check_args
 {
 	my $this = shift ;
-
-	my $args = $this->args() || "" ;
+#	my $args = $this->args() || "" ;
+	my ($args) = @_ ;
 	
 	# If there is no redirection, just add redirect 2>1
-	if ($args !~ /\>/)
+	if (!$args || ($args !~ /\>/) )
 	{
 		$args .= " 2>&1" ;
 	}
@@ -669,13 +726,13 @@ sub _check_args
 sub _run_cmd
 {
 	my $this = shift ;
-	my ($cmd, $args) = @_ ;
+	my ($cmd, $args, $progress, $check_results) = @_ ;
 
-$this->_dbg_prt("_run_cmd($cmd) args=$args\n") ;
+$this->_dbg_prt(["_run_cmd($cmd) args=$args\n"]) ;
 	
 	my @results ;
 #	@results = `$cmd $args` unless $this->option('norun') ;
-	@results = `$cmd $args` unless $this->norun() ;
+	@results = `$cmd $args` ;
 	my $rc = $? ;
 
 	foreach (@results)
@@ -684,7 +741,7 @@ $this->_dbg_prt("_run_cmd($cmd) args=$args\n") ;
 	}
 
 	# if it's defined, call the progress checker for each line
-	my $progress = $this->progress() ;
+#	my $progress = $this->progress() ;
 	if (defined($progress))
 	{
 		my $linenum = 0 ;
@@ -697,7 +754,7 @@ $this->_dbg_prt("_run_cmd($cmd) args=$args\n") ;
 
 	
 	# if it's defined, call the results checker for each line
-	$rc ||= $this->_check_results(\@results) ;
+	$rc ||= $this->_check_results(\@results, $check_results) ;
 
 	return ($rc, @results) ;
 }
@@ -709,24 +766,24 @@ $this->_dbg_prt("_run_cmd($cmd) args=$args\n") ;
 sub _run_timeout
 {
 	my $this = shift ;
-	my ($cmd, $args, $timeout) = @_ ;
+	my ($cmd, $args, $timeout, $progress, $check_results) = @_ ;
 
-$this->_dbg_prt("_run_timeout($cmd) timeout=$timeout args=$args\n") ;
+$this->_dbg_prt(["_run_timeout($cmd) timeout=$timeout args=$args\n"]) ;
+
+	## Timesout must be set
+	$timeout ||= 60 ;
 
 	# Run command and save results
 	my @results ;
 
 	# Run command but time it and kill it when timed out
-	if ($timeout)
-	{
-		local $SIG{ALRM} = sub { 
-			# normal execution
-			die "timeout" ;
-		};
-	}
+	local $SIG{ALRM} = sub { 
+		# normal execution
+		die "timeout\n" ;
+	};
 
 	# if it's defined, call the progress checker for each line
-	my $progress = $this->progress() ;
+#	my $progress = $this->progress() ;
 	my $state_href = {} ;
 	my $linenum = 0 ;
 
@@ -736,7 +793,7 @@ $this->_dbg_prt("_run_timeout($cmd) timeout=$timeout args=$args\n") ;
 	my $endtime = (time + $timeout) ;
 	eval 
 	{
-		alarm($timeout) if $timeout;
+		alarm($timeout);
 		$pid = open my $proc, "$cmd $args |" or $this->throw_fatal("Unable to fork $cmd : $!") ;
 
 		while(<$proc>)
@@ -753,34 +810,39 @@ $this->_dbg_prt("_run_timeout($cmd) timeout=$timeout args=$args\n") ;
 			}
 
 			# if it's defined, check timeout
-			if ($timeout && (time > $endtime))
+			if (time > $endtime)
 			{
 				$endtime=0;
 				last ;
 			}
 		}
-		alarm(0) if $timeout ;
+		alarm(0) ;
 		$rc = $? ;
+print "end of program : rc=$rc\n" if $this->debug ;  
 	};
 	if ($@)
 	{
 		$rc ||= 1 ;
-		if ($@ =~ /timeout/)
+		if ($@ eq "timeout\n")
 		{
+print "timed out - stopping command pid=$pid...\n" if $this->debug ;
 			# timed out  - stop command
 			kill('INT', $pid) ;
 		}
 		else
 		{
+print "unexpected end of program : $@\n" if $this->debug ; 			
 			# Failed
-			alarm(0) if $timeout ;
-			$this->throw_fatal( $@ ) ;
+			alarm(0) ;
+			$this->throw_fatal( "Unexpected error while timing out command \"$cmd $args\": $@" ) ;
 		}
 	}
-#	$SIG{ALRM} = 'DEFAULT' ;
+	alarm(0) ;
+
+print "exit program\n" if $this->debug ; 
 
 	# if it's defined, call the results checker for each line
-	$rc ||= $this->_check_results(\@results) ;
+	$rc ||= $this->_check_results(\@results, $check_results) ;
 
 	return($rc, @results) ;
 }
@@ -791,12 +853,12 @@ $this->_dbg_prt("_run_timeout($cmd) timeout=$timeout args=$args\n") ;
 sub _check_results
 {
 	my $this = shift ;
-	my ($results_aref) = @_ ;
+	my ($results_aref, $check_results) = @_ ;
 
 	my $rc = 0 ;
 	
 	# If it's defined, run the check results hook
-	my $check_results = $this->check_results() ;
+#	my $check_results = $this->check_results() ;
 	if (defined($check_results))
 	{
 		$rc = &$check_results($results_aref) ;
@@ -812,9 +874,11 @@ sub _check_results
 sub _throw_on_error
 {
 	my $this = shift ;
+	my ($on_error) = @_ ;
+	$on_error ||= $ON_ERROR_DEFAULT ;
 	
 	my $throw = "";
-	my $on_error = $this->on_error() || $ON_ERROR_DEFAULT ;
+#	my $on_error = $this->on_error() || $ON_ERROR_DEFAULT ;
 	if ($on_error ne 'status')
 	{
 		$throw = 'throw_fatal' ;

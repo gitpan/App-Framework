@@ -29,8 +29,7 @@ sub app
 	my %sql_vars ;
 
 	# Set up database access
-	$app->set(
-		'sql' => {
+	$app->sql(
 			'database'	=> $opts{'database'},
 			'table'		=> $opts{'table'},
 			'user'		=> $opts{'user'},
@@ -77,12 +76,11 @@ sub app
 					'vals'	=> \%sql_vars,
 				},
 			},
-		}
 	) ;
 
 	## demo of running sql stored as text in a __DATA__ section
 	print "== Create table ===\n" ;
-	$app->sql_from_data("listings2.sql") ;
+	$app->sql->sql_from_data("listings2.sql") ;
 
 	## Do some inserts
 	my $pid = $$ ;
@@ -103,7 +101,7 @@ sub app
 	) ;
 
 	print "Insert pid=$sql_vars{'pid'}...\n" ;
-	$app->sql_query('insert') ;
+	$app->sql->sth_query('insert') ;
 
 
 	%sql_vars = (
@@ -119,7 +117,7 @@ sub app
 		'text' => "This is a test program",
 	) ;
 	print "Insert pid=$sql_vars{'pid'}...\n" ;
-	$app->sql_query('insert') ;
+	$app->sql->sth_query('insert') ;
 	
 	%sql_vars = (
 		'pid'	=> ++$pid,
@@ -134,7 +132,7 @@ sub app
 		'text' => "This is a test program",
 	) ;
 	print "Insert pid=$sql_vars{'pid'}...\n" ;
-	$app->sql_query('insert') ;
+	$app->sql->sth_query('insert') ;
 	
 	%sql_vars = (
 		'pid'	=> ++$pid,
@@ -149,7 +147,7 @@ sub app
 		'text' => "This is a test program",
 	) ;
 	print "Insert pid=$sql_vars{'pid'}...\n" ;
-	$app->sql_query('insert') ;
+	$app->sql->sth_query('insert') ;
 	
 	
 	
@@ -159,7 +157,7 @@ sub app
 	
 	print "Delete..\n" ;
 	$sql_vars{'pid'} = $start_pid ;
-	$app->sql_query('delete') ;
+	$app->sql->sth_query('delete') ;
 	
 	show($app, \%sql_vars, 0, $start_chan, "After delete...") ;
 
@@ -179,10 +177,10 @@ sub show
 	$sql_vars_href->{'channel'} = $chan ;
 	
 	## demo a select transaction - could have done this as:
-	# my @results = $app->sql_query_all('select');
+	# my @results = $app->sth_query_all('select');
 	#
-	$app->sql_query($query_name) ;
-	while (my $href = $app->sql_next($query_name))
+	$app->sql->sth_query($query_name) ;
+	while (my $href = $app->sql->next($query_name))
 	{
 		foreach my $key (sort keys %$href)
 		{
