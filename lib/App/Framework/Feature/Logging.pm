@@ -22,7 +22,7 @@ manage any logging() calls, writing the data into the specified log file.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.000" ;
+our $VERSION = "1.001" ;
 
 
 #============================================================================================
@@ -74,6 +74,9 @@ my %FIELDS = (
 	'logfile'		=> undef,
 	'mode'			=> 'truncate',
 	'to_stdout'		=> 0,
+	
+	## private
+	'_started'		=> 0,
 ) ;
 
 
@@ -210,7 +213,6 @@ $this->_dbg_prt(["logging options=",\%opts]) ;
 	if ($opts{'log'})
 	{
 		$this->logfile($opts{'log'}) ;
-		$this->_start_logging() ;
 	}
 	
 }
@@ -266,6 +268,12 @@ sub logging
 	my $logfile = $this->logfile ;
 	if ($logfile)
 	{
+		## start if we haven't yet
+		if (!$this->_started)
+		{
+			$this->_start_logging() ;
+		}
+
 		open my $fh, ">>$logfile" or $this->throw_fatal("Error: unable to append to logfile \"$logfile\" : $!") ;
 		print $fh $tolog ;
 		close $fh ;
@@ -341,6 +349,9 @@ sub _start_logging
 		
 		open my $fh, "$mode$logfile" or $this->throw_fatal("Unable to write to logfile \"$logfile\" : $!") ;
 		close $fh ;
+		
+		## set flag
+		$this->_started(1) ;
 	}
 }	
 	

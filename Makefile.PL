@@ -56,13 +56,13 @@ my %optional = (
 			'DBD::mysql'	=> 0,
 		},
 	},
-#	2 => {
-#		'name'			=> 'Feature::Mail',
-#		'description'	=> 'Mail support',
-#		'requires'		=> {
-#			'Net::SMTP'		=> 0,
-#		},
-#	},
+	2 => {
+		'name'			=> 'Feature::Mail',
+		'description'	=> 'Mail support',
+		'requires'		=> {
+			'Net::SMTP'		=> 0,
+		},
+	},
 #	3 => {
 #		'name'			=> 'Extension::Daemon',
 #		'description'	=> 'Daemon script extension',

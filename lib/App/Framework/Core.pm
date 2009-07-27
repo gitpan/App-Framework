@@ -23,7 +23,7 @@ Base class for applications. Expected to be derived from by an implementable cla
 use strict ;
 use Carp ;
 
-our $VERSION = "1.013" ;
+our $VERSION = "1.014" ;
 
 
 #============================================================================================
@@ -645,9 +645,9 @@ sub catch_error
 
 # Does nothing!
 
-$this->_dispatch_entry_features() ;
+$this->_dispatch_entry_features($error) ;
 	
-$this->_dispatch_exit_features() ;
+$this->_dispatch_exit_features($error) ;
 
 }
 
@@ -1412,9 +1412,9 @@ sub usage
 	my $this = shift ;
 	my ($level) = @_ ;
 
-$this->_dispatch_entry_features() ;
+$this->_dispatch_entry_features($level) ;
 	$this->_exec_fn('usage', $this, $level) ;
-$this->_dispatch_exit_features() ;
+$this->_dispatch_exit_features($level) ;
 
 }
 

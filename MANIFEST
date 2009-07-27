@@ -73,6 +73,7 @@ t/20-Feature-Run-Logging.t
 t/100-Extension-Filter.t
 t/100-Extension-Filter-std.t
 t/100-Feature-Sql.t
+t/100-Feature-Mail.t
 t/args/dir/dummy
 t/args/exists
 t/args/file

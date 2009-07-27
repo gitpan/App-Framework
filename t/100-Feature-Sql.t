@@ -93,8 +93,8 @@ our $VERSION = '1.003' ;
 
 
 	eval {
-		use DBI;
-		use DBD::mysql;
+		require DBI;
+		require DBD::mysql;
 	} ;
 	if ($@)
 	{

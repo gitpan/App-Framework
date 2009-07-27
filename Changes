@@ -1,5 +1,10 @@
 Revision history for App-Framework
 
+1.01    Wed Jul 22 15:45:00 2009
+		Bug fix: Corrected Run feature status checking
+		Updated Mail feature & added documentation
+		Modified Sql test to stop failures on some systems
+
 1.00    Mon Jul 20 15:45:00 2009
 		Release after user testing
 		Bug fix: Corrected Run feature timeout capability

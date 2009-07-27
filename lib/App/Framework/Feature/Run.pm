@@ -161,7 +161,7 @@ use Carp ;
 
 use File::Which ;
 
-our $VERSION = "1.007" ;
+our $VERSION = "1.008" ;
 
 #============================================================================================
 # USES
@@ -621,11 +621,11 @@ $this->_dbg_prt(["run() args=", \@args]) ;
 	
 	## Handle non-zero exit status
 	my $throw = $this->_throw_on_error($local{'on_error'}) ;
-	if ($throw)
+	if ($throw && $rc)
 	{
 		my $results = join("\n", @results) ;
 		my $error_str = $local{'error_str'} ;
-		$this->$throw("Command \"$cmd $args\" exited with non-zero error status $rc : $error_str\n$results\n") ;
+		$this->$throw("Command \"$cmd $args\" exited with non-zero error status $rc : \"$error_str\"\n$results\n") ;
 	}
 	
 	return($this) ;
