@@ -2,6 +2,7 @@
 #
 use strict ;
 use Test::More ;
+use File::Which ;
 
 use App::Framework ':Script +Run' ;
 
@@ -175,42 +176,16 @@ $app->prt_data("Required stats=", $required) ;
 		{
 			is($required->{$exe}, undef, "$exe status") ;
 		}
-		elsif ($exe eq 'dir')
+		else
 		{
-			if ($^O =~ m/mswin/i)
+			## if we can find it then the framework should find it
+			if (which($exe))
 			{
 				ok ($required->{$exe}, "Expected to find $exe") ;
 			}
 			else
 			{
-				if ($required->{$exe})
-				{
-					ok ($required->{$exe}, "Found $exe") ;
-				}
-				else
-				{
-					# dummy
-					ok(1) ;
-				}
-			}
-		}
-		elsif ($exe eq 'ls')
-		{
-			if ($^O =~ m/linux/i)
-			{
-				ok ($required->{$exe}, "Expected to find $exe") ;
-			}
-			else
-			{
-				if ($required->{$exe})
-				{
-					ok ($required->{$exe}, "Found $exe") ;
-				}
-				else
-				{
-					# dummy
-					ok(1) ;
-				}
+				is($required->{$exe}, undef, "Expected not to find $exe") ;
 			}
 		}
 	}	

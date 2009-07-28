@@ -465,7 +465,7 @@ use Carp ;
 use App::Framework::Core ;
 
 
-our $VERSION = "1.01" ;
+our $VERSION = "1.02" ;
 
 
 #============================================================================================
@@ -582,7 +582,7 @@ sub new
 		{
 			if ($personality)
 			{
-				croak "Sorry, App::Framework does not support multiple personalities (please see a physiciatrist!)" ;
+				croak "Sorry, App::Framework does not support multiple personalities (please see a psychiatrist!)" ;
 			}
 			if ($args)
 			{

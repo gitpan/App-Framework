@@ -681,6 +681,8 @@ sub install_features
 	my @features = @$feature_list ;
 	
 $this->_dbg_prt(["install_features()", \@features, "features args=", $feature_args_href]) ;
+$class_debug = $this->debug if $this->debug >= 5 ;
+
 	
 	## Now try to install them
 	foreach my $feature (@features)
@@ -728,6 +730,9 @@ $this->_dbg_prt(["install_features()", \@features, "features args=", $feature_ar
 				last ;
 			}
 		}
+
+		my $cwd = cwd() ;
+$this->_dbg_prt(["Feature: $feature - unable to load. CWD=$cwd.\n", "Tried=", \@tries, "\n\@INC=", \@INC]) unless ($loaded) ;
 
 		croak "Feature \"$feature\" not supported" unless ($loaded) ;
 
@@ -1013,7 +1018,8 @@ sub _dispatch_features
 	my $this = shift ;
 	my ($method, $status, @args) = @_ ;
 
-$this->_dbg_prt(["_dispatch_features(method=$method, status=$status) (@args)\n"]) ;
+@args = () unless @args ;
+$this->_dbg_prt(["_dispatch_features(method=$method, status=$status) : args=", \@args]) ;
 	
 	# remove package name (if specified)
 	$method =~ s/^(.*)::// ;

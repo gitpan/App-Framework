@@ -325,7 +325,7 @@ filenames and STDIN will then be used.
 use strict ;
 use Carp ;
 
-our $VERSION = "1.006" ;
+our $VERSION = "1.007" ;
 
 #============================================================================================
 # USES
@@ -1118,7 +1118,10 @@ sub _process_argv
 
 	my $argv_aref = $this->argv() ;
 	my @args = @$argv_aref ;
+	$argv_aref = [] ;		# clear our args, rebuild the list as we process them
 	my $idx = 0 ;
+
+$this->_dbg_prt(["_process_argv() : args=", \@args]) ;
 	
 	# values
 	my $args_href = $this->_args() ;
@@ -1143,6 +1146,7 @@ sub _process_argv
 		
 		# set value
 		$args_href->{$name} = $arg ;	
+		push @$argv_aref, $arg ;
 		
 		# get this dest type
 		$dest_type = $name if $args_names_href->{$name}{'dest_type'} ;
@@ -1153,8 +1157,31 @@ sub _process_argv
 	# If last arg specified as ARRAY, then convert  value to ARRAY ref
 	if ($dest_type)
 	{
-		$args_href->{$dest_type} = [$args_href->{$dest_type}] ;
+		my $arg = $args_href->{$dest_type} ;
+		$args_href->{$dest_type} = [] ;
+		pop @$argv_aref ;
+
+		## Handle wildcards (mainly to cope with Windoze)
+		if ($arg =~ m/[\*\?]/)
+		{
+			my @files = glob("$arg") ;
+			if (@files)
+			{
+				push @{$args_href->{$dest_type}}, @files ;
+				push @$argv_aref, @files ;
+				$arg = undef ;		
+			}
+		}
+
+		if ($arg)
+		{
+			push @{$args_href->{$dest_type}}, $arg ;			
+			push @$argv_aref, $arg ;
+		}
+		
 	}
+
+$this->_dbg_prt(["_process_argv() : args hash (so far)=", $args_href, "args now=", \@args]) ;
 	
 	# If there are any args left over, handle them
 	foreach my $arg (@args)
@@ -1162,10 +1189,28 @@ sub _process_argv
 		# If last arg specified as ARRAY, then just add all ARGS
 		if ($dest_type)
 		{
-			push @{$args_href->{$dest_type}}, $arg ;			
+			## Handle wildcards (mainly to cope with Windoze)
+			if ($arg =~ m/[\*\?]/)
+			{
+				my @files = glob("$arg") ;
+				if (@files)
+				{
+					push @{$args_href->{$dest_type}}, @files ;
+					push @$argv_aref, @files ;
+					$arg = undef ;		
+				}
+			}
+			
+			if ($arg)
+			{
+				push @{$args_href->{$dest_type}}, $arg ;			
+				push @$argv_aref, $arg ;
+			}
 		}
 		else
 		{
+			push @$argv_aref, $arg ;
+
 			# create name
 			my $name = sprintf "arg%d", $idx++ ;		
 			
@@ -1183,6 +1228,7 @@ sub _process_argv
 
 	}
 
+	$this->argv($argv_aref) ;
 }
 
 #----------------------------------------------------------------------------

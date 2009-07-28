@@ -6,7 +6,7 @@ use Test::More;
 use App::Framework '+Args(open=none)' ;
 
 # VERSION
-our $VERSION = '2.00' ;
+our $VERSION = '2.01' ;
 
 my $DEBUG=0;
 my $VERBOSE=0;
@@ -18,17 +18,17 @@ my $VERBOSE=0;
 
 	my $input_checks = 3 ;	
 	my @args = (
-		['src1',	't/args/file'],
+		['src1',	't/args/file.txt'],
 		['src2',	't/args/dir'],
-		['src3',	't/args/exists'],
+		['src3',	't/args/exists.txt'],
 		['out1',	't/args/outfile'],
 		['out2',	't/args/outdir'],
 		['out3',	't/args/outfile2'],
 	) ;	
 	my @array = (
-		't/args/file',
-		't/args/exists',
-		't/args/array',
+		't/args/file.txt',
+		't/args/exists.txt',
+		't/args/array.txt',
 	) ;
 	plan tests => 1 + $input_checks + 1 + 2 + ((1 + (scalar(@args) * 2)) * 2 * 2) + ((1 + (scalar(@array)) ) * 2 );
 

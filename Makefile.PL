@@ -4,6 +4,8 @@ use inc::Module::Install;
 use File::Path ;
 use Config;
 
+my $DEBUG = $ENV{DEBUG} || 0 ;
+
 my $name = 'App-Framework' ;
 
 my $mod = $name ;
@@ -41,6 +43,7 @@ requires       'Getopt::Long';
 test_requires  'Test::More'  => '0.42';
 test_requires  'Test::Pod'  => '1.22';
 test_requires  'Test::Pod::Coverage'  => '1.08';
+test_requires  'File::Which' ;
 
 no_index       'directory'   => 'examples';
 
@@ -122,7 +125,7 @@ foreach my $num (keys %to_install)
 	{
 		my @args = ($req) ;
 		push @args, $optional{$num}{'requires'}{$req} if $optional{$num}{'requires'}{$req} ;
-		require(@args) ;
+		requires(@args) ;
 	}
 
 	## Add module		
@@ -167,7 +170,7 @@ my $modpod = '
 pure_all :: modpod
 
 modpod: pm_to_blib $(TO_INST_PM)
-	$(PERLRUN) -Mblib -MApp::Framework -e "modpod()"
+	$(PERLRUN) -Mblib -MApp::Framework -e "modpod(debug => '.$DEBUG.')"
 	$(NOECHO) $(TOUCH) modpod
 ';
 

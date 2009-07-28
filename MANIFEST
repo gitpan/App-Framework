@@ -63,6 +63,7 @@ t/04-ArgsDefault.t
 t/04-ArgsArray.t
 t/04-ArgsArray2.t
 t/04-ArgsOpen.t
+t/04-ArgsWild.t
 t/05-Data.t
 t/06-pod-coverage.t
 t/07-pod.t
@@ -75,9 +76,9 @@ t/100-Extension-Filter-std.t
 t/100-Feature-Sql.t
 t/100-Feature-Mail.t
 t/args/dir/dummy
-t/args/exists
-t/args/file
-t/args/array
+t/args/exists.txt
+t/args/file.txt
+t/args/array.txt
 t/config/20-Feature-Config.conf
 t/config2/20-Feature-Config.conf
 t/MyApp.pm

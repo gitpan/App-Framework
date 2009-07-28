@@ -6,7 +6,7 @@ use Test::More;
 use App::Framework '+Args(open=none)' ;
 
 # VERSION
-our $VERSION = '2.01' ;
+our $VERSION = '1.00' ;
 
 my $DEBUG=0;
 my $VERBOSE=0;
@@ -18,11 +18,17 @@ my $SKIP=0;
 	diag( "Testing args (array)" );
 
 	my @array = (
-		't/args/file.txt',
-		't/args/exists.txt',
 		't/args/array.txt',
+		't/args/exists.txt',
+		't/args/file.txt',
+
+		't/args/file.txt',
+
+		't/args/array.txt',
+		't/args/exists.txt',
+		't/args/file.txt',
 	) ;
-	plan tests => 1 + (1 + scalar(@array) );
+	plan tests => (1 + scalar(@array) );
 
 	my $app = App::Framework->new('exit_type'=>'die',
 		'feature_config' => {
@@ -32,24 +38,9 @@ my $SKIP=0;
 		},
 	) ;
 
-	@ARGV = () ;
-	eval {
-		local *STDOUT ;
-		local *STDERR ;
-
-		open(STDOUT, '>', \$stdout)  or die "Can't open STDOUT: $!" ;
-		open(STDERR, '>', \$stderr) or die "Can't open STDERR: $!";
-		$SKIP=1;
-		$app->go() ;
-	};
-	print "reply: $stdout" ;
-	like($stdout, qr/Error: Must specify/i, "Input array checking") ;
-
 	## Array input
-	foreach my $val (@array)
-	{
-		push @ARGV, $val ;
-	}
+	@ARGV = ('t/args/*.txt', 't/args/file.txt', 't/args/*.txt') ;
+
 	eval {
 		$SKIP=0 ;
 		$app->go() ;
@@ -88,11 +79,12 @@ $app->prt_data("arg_test($src): list=", $array_ref) ;
 	## Test for correct number of args
 	is(scalar(@$array_ref), scalar(@array), "$src: Number of array args") ;
 
+	my %got = map { $_ => $_ } @$array_ref ;
+
 	## test each
-	my $i=0;
 	foreach my $expected (@array)
 	{
-		my $arg = $array_ref->[$i++] || '' ;
+		my $arg = $got{$expected} || '' ;
 		is($arg, $expected, "$src: Array arg $arg") ;
 	}
 }

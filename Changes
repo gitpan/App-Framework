@@ -1,5 +1,10 @@
 Revision history for App-Framework
 
+1.02    Tue Jul 28 15:45:00 2009
+		Bug fix: Corrected pre-requisite PM list created in Makefile.PL
+		Bug fix: corrected Run test (required programs checking)
+		Added wildcard args support (for Windows)
+		
 1.01    Wed Jul 22 15:45:00 2009
 		Bug fix: Corrected Run feature status checking
 		Updated Mail feature & added documentation

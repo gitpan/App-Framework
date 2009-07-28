@@ -6,7 +6,7 @@ use Test::More;
 use App::Framework ;
 
 # VERSION
-our $VERSION = '2.00' ;
+our $VERSION = '2.01' ;
 
 my $DEBUG=0;
 my $VERBOSE=0;
@@ -23,13 +23,13 @@ my $VERBOSE=0;
 	# 4 = output file append
 	# 5 = input file
 	my @args = (
-	#    0          1                   2  3  4  5
-		['src1',	't/args/file',		1, 0, 0, 1],
-		['src2',	't/args/dir',		0, 0, 0, 0],
-		['src3',	't/args/exists',	1, 0, 0, 1],
-		['out1',	't/args/outfile',	1, 1, 0, 0],
-		['out2',	't/args/outdir',	0, 0, 0, 0],
-		['out3',	't/args/outfile2',	1, 1, 1, 0],
+	#    0          1                   	2  3  4  5
+		['src1',	't/args/file.txt',		1, 0, 0, 1],
+		['src2',	't/args/dir',			0, 0, 0, 0],
+		['src3',	't/args/exists.txt',	1, 0, 0, 1],
+		['out1',	't/args/outfile',		1, 1, 0, 0],
+		['out2',	't/args/outdir',		0, 0, 0, 0],
+		['out3',	't/args/outfile2',		1, 1, 1, 0],
 	) ;	
 	
 	my $open_checks = 0 ;
