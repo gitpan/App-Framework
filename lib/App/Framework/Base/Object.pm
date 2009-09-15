@@ -34,7 +34,7 @@ use strict ;
 use Carp ;
 use Cwd ;
 
-our $VERSION = "2.001" ;
+our $VERSION = "2.002" ;
 our $AUTOLOAD ;
 
 #============================================================================================
@@ -266,51 +266,46 @@ print " + fields=$fields ref()=", ref($fields), "\n" if $global_debug>=4 ;
 			$FIELD_LIST{$class} = $class_fields_href ;
 		}
 
-## NEW
-
-# create accessors
-my $code = "package $class;\n" ;
-foreach my $field (keys %{$FIELD_LIST{$class}})
-{
-	if (!$class->can($field))
-	{
-		$code .= qq{
-			## get / set
-	        sub $field 
-	        {
-				my \$this = shift ;
-	            \@_  ? \$this->{$field} = \$_[0]  # set
-	                 : \$this->{$field};          # get
-	        }
-	    };
-	}	
-
-	if (!$class->can("undef_$field"))
-	{
-		$code .= qq{
-			## undefine
-	        sub undef_$field 
-	        {
-				my \$this = shift ;
-				
-	            \$this->{$field} = undef ;
-	        }
-	    };
-	}	
-}
-
-print "Created Accessors:\n$code\n" if $global_debug>=4 ;
-
-    eval $code;
-    if ($@) {
-       die  "ERROR defining accessors for '$class':" 
-            . "\n\t$@\n" 
-            . "-----------------------------------------------------\n"
-            . $code;
-    }
-
-## NEW
-
+		# create accessors
+		my $code = "package $class;\n" ;
+		foreach my $field (keys %{$FIELD_LIST{$class}})
+		{
+			if (!$class->can($field))
+			{
+				$code .= qq{
+					## get / set
+			        sub $field 
+			        {
+						my \$this = shift ;
+			            \@_  ? \$this->{$field} = \$_[0]  # set
+			                 : \$this->{$field};          # get
+			        }
+			    };
+			}	
+		
+			if (!$class->can("undef_$field"))
+			{
+				$code .= qq{
+					## undefine
+			        sub undef_$field 
+			        {
+						my \$this = shift ;
+						
+			            \$this->{$field} = undef ;
+			        }
+			    };
+			}	
+		}
+		
+		print "Created Accessors:\n$code\n" if $global_debug>=4 ;
+	
+	    eval $code;
+	    if ($@) {
+	       die  "ERROR defining accessors for '$class':" 
+	            . "\n\t$@\n" 
+	            . "-----------------------------------------------------\n"
+	            . $code;
+	    }
 
 		## Create private fields
 		
@@ -1078,8 +1073,11 @@ sub ___set
 	my ($field, $new_value) = @_ ;
 
 ## NEW	
+if ($global_debug>=10)
+{
 print "Unexpected ___set($field, $new_value)\n" ;
 $this->dump_callstack() ;
+}
 ## NEW	
 
 
@@ -1128,8 +1126,11 @@ sub ___get
 	#my $class = $this->class() ;
 
 ## NEW	
+if ($global_debug>=10)
+{
 print "Unexpected ___get($field)\n" ;
 $this->dump_callstack() ;
+}
 ## NEW	
 
 
@@ -1175,8 +1176,11 @@ sub AUTOLOAD
 	print "AUTOLOAD ($AUTOLOAD)\n" if $global_debug>=5 ;
 
 ## NEW	
+if ($global_debug>=10)
+{
 my $caller = (caller())[0] ;
 print "Unexpected AUTOLOAD ($AUTOLOAD) from $caller\n" ;
+}
 ## NEW	
 
     my $this = shift;

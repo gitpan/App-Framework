@@ -7,7 +7,7 @@ use App::Framework '+sql' ;
 use config ;
 
 # VERSION
-our $VERSION = '1.003' ;
+our $VERSION = '1.004' ;
 
 
 	# Data
@@ -168,10 +168,11 @@ sub app
 
 	my %sql_vars_internal ;
 	$sql->set(
-			'database'	=> $opts_href->{'database'},
-			'table'		=> $opts_href->{'table'},
-			'user'		=> $opts_href->{'user'},
-			'password'	=> $opts_href->{'password'},
+			'host'		=> $host,
+			'database'	=> $test_db,
+			'table'		=> $test_table,
+			'user'		=> $test_user,
+			'password'	=> $test_password,
 			'sql_vars'	=> \%sql_vars_internal,
 			
 			# Option to do some Sql debugging by tracing transactions to a file
