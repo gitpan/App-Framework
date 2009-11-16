@@ -1,5 +1,8 @@
 Revision history for App-Framework
 
+1.04    Mon Nov 16 13:45:00 2009
+		Bug fix: Corrected config path environment definition (see rt.cpan.org #49649)
+		
 1.03    Tue Sep 15 13:45:00 2009
 		Bug fix: corrected Sql test (mysql user setting)
 		Bug fix: Removed unnecessary debug output from Object

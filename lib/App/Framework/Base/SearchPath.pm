@@ -122,6 +122,7 @@ sub new
 	my $this = $class->SUPER::new(%args) ;
 
 #$this->debug(2) ;
+$this->_dbg_prt(["new this=", $this], 10) ;
 
 	return($this) ;
 }
@@ -198,6 +199,7 @@ sub path
 
 	$path_ref ||= '' ;
 $this->_dbg_prt(["path($path_ref)\n"]) ;
+$this->_dbg_prt(["this=", $this], 10) ;
 	
 	my $list_aref = $this->_access_path('_path', $path_ref) ;
 
@@ -234,6 +236,7 @@ sub write_path
 
 	$path_ref ||= '' ;
 $this->_dbg_prt(["write_path($path_ref)\n"]) ;
+$this->_dbg_prt(["this=", $this], 10) ;
 	
 	# get write path..
 	my $list_aref = $this->_access_path('_write_path', $path_ref) ;
@@ -260,6 +263,7 @@ sub read_filepath
 	my ($file) = @_ ;
 
 $this->_dbg_prt(["get read_filepath($file)\n"]) ;
+$this->_dbg_prt(["this=", $this], 10) ;
 	
 	my @dirs = $this->path() ;
 	my $path = undef ;
@@ -294,6 +298,7 @@ sub write_filepath
 	my ($file) = @_ ;
 
 $this->_dbg_prt(["write_filepath($file)\n"]) ;
+$this->_dbg_prt(["this=", $this], 10) ;
 	
 	my @dirs = $this->write_path() ;
 	my $path = undef ;
@@ -382,8 +387,10 @@ $this->_dbg_prt(["_access_path($name, $path_ref)\n"]) ;
 		}
 
 $this->_dbg_prt([" + dirs=", \@dirs]) ;
+$this->_dbg_prt(["this=", $this], 10) ;
 		
 		my $vars_href = $this->env ;
+$this->_dbg_prt([" + env=", $vars_href]) ;
 		
 		## expand directories
 		foreach my $d (@dirs)

@@ -13,6 +13,13 @@ my $VERBOSE=0;
 
 	my $stdout="" ;
 	my $stderr="" ;
+	
+	if (@ARGV)
+	{
+		$DEBUG = $ARGV[0] ;
+		$VERBOSE = $ARGV[0] ;
+		@ARGV = () ;
+	}
 
 	diag( "Testing config" );
 

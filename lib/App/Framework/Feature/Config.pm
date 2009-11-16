@@ -407,7 +407,14 @@ sub new
 	my $app = $this->app ;
 	if ($app)
 	{
-		$search_obj->env($app->vars) ;
+		## only interested in scalar values
+		my %vars = $app->vars() ;
+		my %app_vars ;
+		foreach my $var (keys %vars)
+		{
+			$app_vars{$var} = $vars{$var} if !ref($vars{$var}) || ref($vars{$var}) eq 'SCALAR' ;
+		}
+		$search_obj->env(\%app_vars) ;
 	}
 
 	return($this) ;
