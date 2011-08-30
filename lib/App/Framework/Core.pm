@@ -1648,7 +1648,7 @@ $this->_dbg_prt([" + found $external_name in $package\n"], 2) ;
 		}
 		if ($type eq 'HASH')
 		{
-			if (defined(%alias))
+			if (%alias)
 			{
 				$this->set($field_name => \%alias) ;
 			}
@@ -1851,7 +1851,7 @@ no strict "refs" ;
         if (defined (@alias)) {
             print "\t \@$varName @alias \n";
         } 
-        if (defined (%alias)) {
+        if (%alias) {
             print "\t \%$varName ",%alias," \n";
         }
         if (defined (&alias)) {

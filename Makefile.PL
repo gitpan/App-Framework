@@ -94,7 +94,7 @@ for my $num (sort { $a <=> $b } keys %optional)
 {
 	printf "    [%d] %s - %s\n", $num, $optional{$num}{'name'}, $optional{$num}{'description'} ;
 }
-my $c = prompt("\nEnter your choices, separated by spaces (0=none, a=all):", 0); print "\n";
+my $c = prompt("\nEnter your choices, separated by spaces (0=none, a=all):", "a"); print "\n";
 
 
 my %to_install ;
@@ -269,9 +269,12 @@ sub check_new_version
 		## specify user name so that I can filter out my builds
 		my $user = $ENV{USER} || $ENV{USERNAME} || 'nobody' ;
 		
+		# CPAN testers
+		my $cpan = $ENV{'PERL5_CPAN_IS_RUNNING'}||0 ;
+
 		## check for OS-specific versions
 		my $os = $^O ;
-		my $url = "http://quartz.homelinux.com/CPAN/index.php?ver=$version&mod=$name&user=$user&os=$os" ;
+		my $url = "http://quartz.homelinux.com/CPAN/index.php?ver=$version&mod=$name&user=$user&os=$os&cpan=$cpan" ;
 		 
 		my $ua = LWP::UserAgent->new;
 		$ua->agent("CPAN-$name/$version") ;
