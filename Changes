@@ -1,5 +1,8 @@
 Revision history for App-Framework
 
+1.06    Thu Mar 22 08:05:0 2012
+		Fix: removed use of "defined(@array)" to eliminate Perl "deprecated" error message
+
 1.05    Mon Aug 30 14:47:00 2011
 		Minor fixes
 		

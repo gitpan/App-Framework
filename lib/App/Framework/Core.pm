@@ -23,7 +23,7 @@ Base class for applications. Expected to be derived from by an implementable cla
 use strict ;
 use Carp ;
 
-our $VERSION = "1.014" ;
+our $VERSION = "1.015" ;
 
 
 #============================================================================================
@@ -1641,7 +1641,8 @@ $this->_dbg_prt([" + found $external_name in $package\n"], 2) ;
 		}
 		if ($type eq 'ARRAY')
 		{
-			if (defined(@alias))
+			# was - if (defined(@alias)) - removed due to "deprecated" warning
+			if (@alias)
 			{
 				$this->set($field_name => \@alias) ;
 			}
@@ -1848,7 +1849,7 @@ no strict "refs" ;
         if (defined ($alias)) {
             print "\t \$$varName $alias \n";
         } 
-        if (defined (@alias)) {
+        if (@alias) {
             print "\t \@$varName @alias \n";
         } 
         if (%alias) {

@@ -12,13 +12,16 @@ our $VERSION = '1.000' ;
 	App::Framework->new(
 		'feature_config' => {
 			'options'	=> {
-				'debug'		=> 2,
+				'debug'		=> 0,
 			},
 			'config'	=> {
-				'debug'		=> 2,
+				## Set to >0 to debug configuration processing
+				'debug'		=> 0,
 			},
 		}
 	)->go() ;
+
+
 
 #=================================================================================
 # SUBROUTINES EXECUTED BY APP
@@ -34,10 +37,27 @@ sub app
 	# do something useful....
 	print "I'm in the app...\n" ;
 	
+	## Get the global settings
+	my @global = $app->feature('Config')->get_array() ; # globals as an array..
+	my %global = $app->feature('Config')->get_hash() ; # globals as a hash....
+	$app->prt_data("Global: array=", \@global, " hash=", \%global) ;
+	
+	## get the specific array
 	my @inst = $app->feature('Config')->get_array('instance') ;
 	$app->prt_data("Inst",\@inst) ;
 	
+	## Do it again but use the config object
+	my $cfg = $app->feature('Config') ;
+	my @inst2 = $cfg->get_array('instance') ;
+	$app->prt_data("Inst",\@inst2) ;
 	
+	## Do it again but use the config object
+	my $cfg2 = $app->config ;
+	my @inst3 = $cfg2->get_array('instance') ;
+	$app->prt_data("Inst",\@inst3) ;
+	
+	
+	## Finish by showing modified usage - i.e. reading config adds the globals to the options shown below....
 	$app->usage() ;
 }
 
